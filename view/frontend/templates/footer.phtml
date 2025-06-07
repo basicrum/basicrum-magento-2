@@ -1,0 +1,7 @@
+<?php
+$config = $block->getConfig();
+if ($config['enabled']) :
+?>
+<script type="text/javascript" src="<?= $block->escapeUrl($block->getViewFileUrl('BasicRum_Analytics::js/rum-loader.js')) ?>"
+        data-beacon-endpoint="<?= $block->escapeHtml($config['beacon']) ?>"></script>
+<?php endif; ?>
