@@ -5,6 +5,7 @@
         <referenceContainer name="before.body.end">
             <block class="BasicRum\Analytics\Block\Script" name="basicrum.analytics.script"
                    template="BasicRum_Analytics::footer.phtml"
+                   ifconfig="basicrum/general/enabled"
             />
         </referenceContainer>
     </body>

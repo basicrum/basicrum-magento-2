@@ -1,6 +1,5 @@
 <?php
 $config = $block->getConfig();
-if ($config['enabled']) :
 ?>
 <script>
 (function(w) {
@@ -31,7 +30,7 @@ if ($config['enabled']) :
     };
 
     w.basicRumBoomerangConfig = {
-        beacon_url: "<?= $block->escapeUrl($config['beacon']) ?>",
+        beacon_url: "<?= $block->escapeJs($config['beacon_endpoint']) ?>",
         instrument_xhr: true,
         Continuity: {
             enabled: true
@@ -54,7 +53,7 @@ if ($config['enabled']) :
   window.BOOMR.snippetVersion = 15;
 
   // NOTE: Set Boomerang URL here
-  window.BOOMR.url = "<?= $block->escapeUrl($block->getViewFileUrl('BasicRum_Analytics::js/boomerang-1.737.60.cutting-edge.min.js')) ?>";
+  window.BOOMR.url = "<?= $block->escapeJs($block->getViewFileUrl('BasicRum_Analytics::js/boomerang-1.737.60.cutting-edge.min.js')) ?>";
 
   // document.currentScript is supported in all browsers other than IE
   var where = document.currentScript || document.getElementsByTagName("script")[0],
@@ -234,4 +233,3 @@ if ($config['enabled']) :
   }
 })();
 </script>
-<?php endif; ?>

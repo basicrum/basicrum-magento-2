@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 namespace BasicRum\Analytics\Block;
 
 use Magento\Framework\View\Element\Template;
@@ -25,7 +27,7 @@ class Script extends Template
     {
         return [
             'enabled' => $this->scopeConfig->isSetFlag('basicrum/general/enabled', ScopeInterface::SCOPE_STORE),
-            'beacon' => $this->scopeConfig->getValue('basicrum/general/beacon_endpoint', ScopeInterface::SCOPE_STORE)
+            'beacon_endpoint' => $this->scopeConfig->getValue('basicrum/general/beacon_endpoint', ScopeInterface::SCOPE_STORE)
         ];
     }
 }
