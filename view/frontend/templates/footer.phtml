@@ -38,7 +38,10 @@ $config = $block->getConfig();
         ResourceTiming: {
             "enabled": true,
             "splitAtPath": true
-        }
+        },
+        secure_cookie: true,
+        same_site_cookie: "Strict"
+
     }
 })(window);
 (function() {
