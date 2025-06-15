@@ -23,6 +23,10 @@
                 <field id="beacon_endpoint" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Beacon Endpoint</label>
                 </field>
+                <field id="boomerang_version" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Boomerang JS Version</label>
+                    <frontend_model>BasicRum\Analytics\Block\Adminhtml\System\Config\BoomerangVersion</frontend_model>
+                </field>
             </group>
         </section>
     </system>
