@@ -11,6 +11,11 @@
             <resource>BasicRum_Analytics::basicrum_analytics</resource>
             <group id="general" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
                 <label>General Settings</label>
+                <field id="logo" translate="label" type="text" sortOrder="0" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <frontend_model>BasicRum\Analytics\Block\Adminhtml\System\Config\Logo</frontend_model>
+                    <label>BasicRum Logo</label>
+                    <comment>This field is used to display the BasicRum logo</comment>
+                </field>
                 <field id="enabled" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Enable</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
