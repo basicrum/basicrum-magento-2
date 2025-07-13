@@ -3,7 +3,7 @@
       xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
     <body>
         <referenceContainer name="before.body.end">
-            <block class="BasicRum\Analytics\Block\Script" name="basicrum.analytics.script"
+            <block class="BasicRum\Analytics\Block\Footer" name="basicrum.analytics.footer"
                    template="BasicRum_Analytics::footer.phtml"
                    ifconfig="basicrum/general/enabled"
             />

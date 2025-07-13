@@ -1,5 +1,9 @@
 <?php
+/** @var \BasicRum\Analytics\Block\Footer $block */
+/** @var \Magento\Framework\View\Element\Template\RendererInterface $secureRenderer */
+
 $config = $block->getConfig();
+$pageType = $block->getPageType();
 
 $scriptString = <<<script
 (function(w) {
@@ -8,6 +12,13 @@ $scriptString = <<<script
     if (!w) {
         return;
     }
+
+    w.BOOMR_mq = window.BOOMR_mq || [];
+
+    w.BOOMR_mq.push(
+        ["addVar", "p_type", "{$block->escapeJs($pageType)}"],
+        ["addVar", "p_gen", "mage2"]
+    );
 
     BOOMR = w.BOOMR || {};
     BOOMR.plugins = BOOMR.plugins || {};
@@ -41,7 +52,6 @@ $scriptString = <<<script
         },
         secure_cookie: true,
         same_site_cookie: "Strict"
-
     }
 })(window);
 (function(d, s) {

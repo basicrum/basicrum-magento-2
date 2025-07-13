@@ -9,33 +9,7 @@ BasicRum Analytics is a Magento 2 extension that helps you collect and analyze r
 
 ## Installation
 
-### Via Composer (recommended)
-
-1. Open a terminal and navigate to your Magento root directory
-2. Run the following commands:
-
-```bash
-composer require basicrum/magento-2-extension
-bin/magento module:enable BasicRum_Analytics
-bin/magento setup:upgrade
-bin/magento setup:di:compile
-bin/magento setup:static-content:deploy -f
-bin/magento cache:flush
-```
-
-### Manual Installation
-
-1. Download the extension archive
-2. Extract the contents to `app/code/BasicRum/Analytics` in your Magento root directory
-3. Run the following commands:
-
-```bash
-bin/magento module:enable BasicRum_Analytics
-bin/magento setup:upgrade
-bin/magento setup:di:compile
-bin/magento setup:static-content:deploy -f
-bin/magento cache:flush
-```
+TO BE DEFINED
 
 ## Configuration
 
