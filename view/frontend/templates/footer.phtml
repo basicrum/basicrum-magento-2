@@ -1,7 +1,7 @@
 <?php
 $config = $block->getConfig();
-?>
-<script>
+
+$scriptString = <<<script
 (function(w) {
     var WAIT_AFTER_ONLOAD_MILLISECONDS = 5000;
 
@@ -30,7 +30,7 @@ $config = $block->getConfig();
     };
 
     w.basicRumBoomerangConfig = {
-        beacon_url: "<?= $block->escapeJs($config['beacon_endpoint']) ?>",
+        beacon_url: "{$block->escapeJs($config['beacon_endpoint'])}",
         instrument_xhr: true,
         Continuity: {
             enabled: true
@@ -48,7 +48,9 @@ $config = $block->getConfig();
   var js = d.createElement(s),
       sc = d.getElementsByTagName(s)[0];
 
-  js.src="<?= $block->escapeJs($block->getViewFileUrl('BasicRum_Analytics::js/boomr/boomerang-1.815.60.cutting-edge.min.js')) ?>";
+  js.src="{$block->escapeJs($block->getViewFileUrl('BasicRum_Analytics::js/boomr/boomerang-1.815.60.cutting-edge.min.js'))}";
   sc.parentNode.insertBefore(js, sc);
 }(document, "script"));
-</script>
+script;
+?>
+<?= /* @noEscape */ $secureRenderer->renderTag('script', [], $scriptString, false) ?>
