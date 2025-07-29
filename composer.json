@@ -2,8 +2,7 @@
     "name": "basicrum/basicrum-analytics",
     "description": "BasicRUM Analytics Magento 2 module",
     "type": "magento2-module",
-    "version": "1.0.0",
-    "minimum-stability": "dev",
+    "version": "0.0.1",
     "authors": [
         {
             "name": "Tsvetan Stoychev",
