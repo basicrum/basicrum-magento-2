@@ -1,0 +1,38 @@
+{
+    "name": "basicrum/basicrum-analytics",
+    "description": "BasicRUM Analytics Magento 2 module",
+    "type": "magento2-module",
+    "version": "0.0.1",
+    "minimum-stability": "stable",
+    "authors": [
+        {
+            "name": "Tsvetan Stoychev",
+            "email": "tsto@basicrum.com"
+        }
+    ],
+    "require": {
+        "php": "^8.1|^8.2|^8.3",
+        "magento/framework": "*",
+        "magento/module-store": "*"
+    },
+    "archive": {
+        "exclude": [
+            ".github"
+        ]
+    },
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://repo.magento.com/"
+        }
+    ],
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "BasicRum\\Analytics\\": ""
+        }
+    },
+    "license": "MIT"
+}
