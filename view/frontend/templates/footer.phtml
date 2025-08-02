@@ -1,9 +1,19 @@
 <?php
-/** @var \BasicRum\Analytics\Block\Footer $block */
-/** @var \Magento\Framework\View\Element\Template\RendererInterface $secureRenderer */
+declare(strict_types=1);
 
-$config = $block->getConfig();
-$pageType = $block->getPageType();
+use BasicRum\Analytics\ViewModel\Footer;
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+use Magento\Framework\View\Helper\SecureHtmlRenderer;
+
+/** @var Template $block */
+/** @var Footer $viewModel */
+/** @var SecureHtmlRenderer $secureRenderer */
+/** @var Escaper $escaper */
+
+$viewModel = $block->getViewModel();
+$config = $viewModel->getConfig();
+$pageType = $viewModel->getPageType();
 
 $scriptString = <<<script
 (function(w) {
@@ -58,7 +68,7 @@ $scriptString = <<<script
   var js = d.createElement(s),
       sc = d.getElementsByTagName(s)[0];
 
-  js.src="{$block->escapeJs($block->getViewFileUrl('BasicRum_Analytics::js/boomr/boomerang-1.815.60.cutting-edge.min.js'))}";
+  js.src="{$escaper->escapeJs($block->getViewFileUrl('BasicRum_Analytics::js/boomr/boomerang-1.815.60.cutting-edge.min.js'))}";
   sc.parentNode.insertBefore(js, sc);
 }(document, "script"));
 script;
