@@ -9,26 +9,10 @@ use Magento\Framework\App\ResponseInterface;
 
 class PageTypeDetector implements PageTypeDetectorInterface
 {
-    /**
-     * @var HttpRequest
-     */
-    private $request;
-
-    /**
-     * @var ResponseInterface
-     */
-    private $response;
-
-    /**
-     * @param HttpRequest $request
-     * @param ResponseInterface $response
-     */
     public function __construct(
-        HttpRequest $request,
-        ResponseInterface $response
+        private HttpRequest $request,
+        private ResponseInterface $response
     ) {
-        $this->request = $request;
-        $this->response = $response;
     }
 
     /**
