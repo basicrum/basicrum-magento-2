@@ -1,0 +1,19 @@
+{
+  "name": "basicrum-magento-2-tests",
+  "version": "0.0.2",
+  "private": true,
+  "description": "Automated verification for the Basicrum Magento 2 module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build:loaders": "node tests/js/build-loaders.js",
+    "check:minified": "node tests/js/check-minified.js",
+    "test:browser": "playwright test",
+    "test": "npm run check:minified && npm run test:browser"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "uglify-js": "3.19.3"
+  }
+}

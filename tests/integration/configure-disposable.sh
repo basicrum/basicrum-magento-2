@@ -1,0 +1,41 @@
+#!/usr/bin/env sh
+set -eu
+
+if [ "${BASICRUM_DISPOSABLE_MAGENTO:-}" != "1" ]; then
+    echo "Set BASICRUM_DISPOSABLE_MAGENTO=1 only for a disposable Magento installation." >&2
+    exit 1
+fi
+
+if [ -z "${MAGENTO_ROOT:-}" ] || [ ! -x "${MAGENTO_ROOT}/bin/magento" ]; then
+    echo "MAGENTO_ROOT must point to a disposable Magento installation." >&2
+    exit 1
+fi
+
+if [ -z "${MAGENTO_STOREFRONT_URL:-}" ]; then
+    echo "MAGENTO_STOREFRONT_URL is required." >&2
+    exit 1
+fi
+
+module_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+cd "$module_root"
+
+magento="${MAGENTO_ROOT}/bin/magento"
+
+"$magento" module:status BasicRum_Analytics
+"$magento" config:set basicrum/general/enabled 1
+"$magento" config:set basicrum/general/beacon_endpoint https://collector.basicrum.test/beacon
+"$magento" config:set basicrum/general/brum_site_id 550e8400-e29b-41d4-a716-446655440000
+"$magento" config:set basicrum/consent/enabled 1
+"$magento" config:set basicrum/consent/mode manual
+"$magento" config:set basicrum/privacy/strip_query_string 1
+"$magento" config:set basicrum/performance/wait_after_onload 0
+"$magento" config:set basicrum/performance/delay_ms 0
+"$magento" config:set basicrum/developer/development_mode 0
+"$magento" cache:clean config layout block_html full_page
+
+if [ "${BASICRUM_DEPLOY_STATIC:-0}" = "1" ]; then
+    "$magento" setup:static-content:deploy -f en_US
+fi
+
+MAGENTO_STOREFRONT_URL="$MAGENTO_STOREFRONT_URL" \
+    npx playwright test --config=playwright.integration.config.js

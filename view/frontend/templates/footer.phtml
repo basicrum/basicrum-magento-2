@@ -2,75 +2,111 @@
 declare(strict_types=1);
 
 use BasicRum\Analytics\ViewModel\Footer;
-use Magento\Framework\Escaper;
 use Magento\Framework\View\Element\Template;
 use Magento\Framework\View\Helper\SecureHtmlRenderer;
 
 /** @var Template $block */
 /** @var Footer $viewModel */
 /** @var SecureHtmlRenderer $secureRenderer */
-/** @var Escaper $escaper */
 
 $viewModel = $block->getViewModel();
 $config = $viewModel->getConfig();
-$pageType = $viewModel->getPageType();
 
-$scriptString = <<<script
-(function(w) {
-    var WAIT_AFTER_ONLOAD_MILLISECONDS = 5000;
+// Revalidate the effective store-scoped configuration even when the layout's
+// ifconfig gate has already selected this block.
+if ($config === null) {
+    return;
+}
 
-    if (!w) {
-        return;
-    }
+$jsonFlags = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES;
+$boomerangUrl = $block->getViewFileUrl(
+    'BasicRum_Analytics::js/boomr/boomerang-' . $viewModel->getBoomerangVersion() . '.cutting-edge.min.js'
+);
+$loaderName = $config['consent_enabled']
+    ? 'consent-boomerang-loader-v1-15.min.js'
+    : 'boomerang-loader-v15.min.js';
+$loaderUrl = $block->getViewFileUrl('BasicRum_Analytics::js/loaders/' . $loaderName);
 
-    w.BOOMR_mq = window.BOOMR_mq || [];
+$boomerangVars = [
+    ['addVar', 'p_type', $viewModel->getPageType()],
+    ['addVar', 'p_gen', 'mage2'],
+    ['addVar', 'brum_site_id', $config['brum_site_id']],
+];
+$boomerangConfig = [
+    'beacon_url' => $config['beacon_endpoint'],
+    'instrument_xhr' => false,
+    'strip_query_string' => $config['strip_query_string'],
+    'Continuity' => ['enabled' => true],
+    'ResourceTiming' => [
+        'enabled' => true,
+        'splitAtPath' => true,
+    ],
+    'secure_cookie' => true,
+    'same_site_cookie' => 'Strict',
+];
 
-    w.BOOMR_mq.push(
-        ["addVar", "p_type", "{$block->escapeJs($pageType)}"],
-        ["addVar", "p_gen", "mage2"]
-    );
+$boomerangVarsJson = json_encode($boomerangVars, $jsonFlags);
+$boomerangUrlJson = json_encode($boomerangUrl, $jsonFlags);
+$boomerangConfigJson = json_encode($boomerangConfig, $jsonFlags);
 
-    BOOMR = w.BOOMR || {};
-    BOOMR.plugins = BOOMR.plugins || {};
+if ($boomerangVarsJson === false || $boomerangUrlJson === false || $boomerangConfigJson === false) {
+    return;
+}
 
-    BOOMR.plugins.WaitAfterOnload = {
+$waitScript = '';
+if ($config['wait_after_onload'] && $config['delay_ms'] > 0) {
+    $delayMs = (int) $config['delay_ms'];
+    $waitScript = <<<JS
+
+    b.plugins = b.plugins || {};
+    b.plugins.WaitAfterOnload = {
         complete: false,
-
+        timer: null,
         init: function() {
-            BOOMR.subscribe("page_ready", function() {
-                setTimeout(function() {
+            b.subscribe("page_ready", function() {
+                this.timer = w.setTimeout(function() {
+                    this.timer = null;
+                    if (w.basicRumConsentWithdrawn) {
+                        return;
+                    }
                     this.complete = true;
-                    BOOMR.sendBeacon();
-                }.bind(this), WAIT_AFTER_ONLOAD_MILLISECONDS);
+                    b.sendBeacon();
+                }.bind(this), {$delayMs});
             }, {}, this);
         },
-
         is_complete: function() {
             return this.complete;
         }
     };
+JS;
+}
 
-    w.basicRumBoomerangConfig = {
-        beacon_url: "{$block->escapeJs($config['beacon_endpoint'])}",
-        instrument_xhr: true,
-        Continuity: {
-            enabled: true
-        },
-        ResourceTiming: {
-            "enabled": true,
-            "splitAtPath": true
-        },
-        secure_cookie: true,
-        same_site_cookie: "Strict"
+$scriptString = <<<JS
+(function(w) {
+    if (!w) {
+        return;
     }
-})(window);
-(function(d, s) {
-  var js = d.createElement(s),
-      sc = d.getElementsByTagName(s)[0];
 
-  js.src="{$escaper->escapeJs($block->getViewFileUrl('BasicRum_Analytics::js/boomr/boomerang-1.815.60.cutting-edge.min.js'))}";
-  sc.parentNode.insertBefore(js, sc);
-}(document, "script"));
-script;
+    w.BOOMR_mq = w.BOOMR_mq || [];
+    w.BOOMR_mq.push.apply(w.BOOMR_mq, {$boomerangVarsJson});
+
+    w.BOOMR = w.BOOMR || {};
+    var b = w.BOOMR;
+    b.url = {$boomerangUrlJson};
+{$waitScript}
+    w.basicRumBoomerangConfig = {$boomerangConfigJson};
+})(window);
+JS;
 ?>
-<?= /* @noEscape */ $secureRenderer->renderTag('script', [], $scriptString, false) ?>
+<?= /* @noEscape */ $secureRenderer->renderTag(
+    'script',
+    ['data-cfasync' => 'false'],
+    $scriptString,
+    false
+) ?>
+<?= /* @noEscape */ $secureRenderer->renderTag(
+    'script',
+    ['src' => $loaderUrl, 'async' => 'true', 'data-cfasync' => 'false'],
+    '',
+    false
+) ?>

@@ -19,8 +19,8 @@ class Logo extends Field
     public function render(AbstractElement $element)
     {
         $html = '<div style="margin: 20px 0; text-align: center; font-size: 3rem;">';
-        $html .= '<img src="' . $this->getViewFileUrl('BasicRum_Analytics::images/basicrum-log.svg') . '" alt="BasicRum Logo" style="width: 35px; height: 35px;" />'; 
-        $html .= 'BasicRUM Analytics';
+        $html .= '<img src="' . $this->getViewFileUrl('BasicRum_Analytics::images/basicrum-log.svg') . '" alt="Basicrum Logo" style="width: 35px; height: 35px;" />';
+        $html .= 'Basicrum Analytics';
         $html .= '</div>';
         return $html;
     }
