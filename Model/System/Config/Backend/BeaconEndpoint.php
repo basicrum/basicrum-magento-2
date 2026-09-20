@@ -50,7 +50,7 @@ class BeaconEndpoint extends Value
 
         if ($value !== '' && !Config::isValidBeaconEndpoint($value)) {
             throw new LocalizedException(
-                __('Beacon Endpoint must be a valid HTTP or HTTPS URL.')
+                __('Beacon Endpoint must be a valid HTTP or HTTPS URL without embedded credentials or a fragment.')
             );
         }
 

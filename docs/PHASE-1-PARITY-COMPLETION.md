@@ -38,22 +38,27 @@ unchanged.
 
 There is no data migration. Existing paths and values remain stored. Explicit
 `consent/enabled=0` selects immediate loading; `1` selects consent-controlled
-loading. Legacy mode names remain visible but behave only as manual-integration
-metadata and never grant consent. Existing sites require the new Site ID before
-monitoring resumes. The unstored hardcoded five-second wait becomes explicit
-off/zero settings; administrators can opt back into 5000 ms.
+loading. The currently effective legacy mode remains visible but behaves only
+as manual-integration metadata and never grants consent; unrelated legacy modes
+cannot be newly selected. Existing sites require the new Site ID before
+monitoring resumes. Endpoint queries remain compatible, while embedded URL
+credentials and fragments now fail validation. The unstored hardcoded
+five-second wait becomes explicit off/zero settings; administrators can opt
+back into 5000 ms.
 
 ## Deferred boundaries
 
 D-001 page vocabulary, D-002 staff exclusion, D-003 placement/readiness queues,
 and D-004 cross-plugin wording remain unchanged. Automatic provider adapters,
 a broad optimizer matrix, package/release publishing, and module-level license
-text approval are not completed by Phase 1.
+text approval are not completed by Phase 1. The post-implementation CSP and
+full-page-cache findings recorded in `DEFERRED-CODE-REVIEW-FINDINGS.md` are also
+explicitly deferred.
 
 ## Verification recorded at completion
 
-- Focused PHP harness on PHP 8.3: 8 groups passed.
-- PHP syntax checks: all module and test PHP/PHTML files passed.
+- Focused PHP harness on PHP 8.2, 8.3, and 8.4: 9 groups passed on each version.
+- PHP syntax checks: all module and test PHP/PHTML files passed on PHP 8.2, 8.3, and 8.4.
 - XML well-formedness: module, admin, and layout XML passed.
 - Loader minification/provenance checks: passed.
 - Chromium browser suite: 28 tests passed against readable/minified loaders

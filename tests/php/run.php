@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use BasicRum\Analytics\Api\PageTypeDetectorInterface;
+use BasicRum\Analytics\Block\Adminhtml\System\Config\ConsentMode;
 use BasicRum\Analytics\Model\Config;
 use BasicRum\Analytics\Model\System\Config\Backend\BeaconEndpoint;
 use BasicRum\Analytics\Model\System\Config\Backend\BrumSiteId;
@@ -17,6 +18,7 @@ use Magento\Store\Model\ScopeInterface;
 $root = dirname(__DIR__, 2);
 require __DIR__ . '/bootstrap.php';
 require $root . '/Api/PageTypeDetectorInterface.php';
+require $root . '/Block/Adminhtml/System/Config/ConsentMode.php';
 require $root . '/Model/Config.php';
 require $root . '/ViewModel/Footer.php';
 require $root . '/Model/System/Config/Backend/BeaconEndpoint.php';
@@ -56,6 +58,14 @@ $tests['validators accept only supported endpoint and UUIDv4 values'] = function
     basicrum_assert_false(Config::isValidBeaconEndpoint('javascript:alert(1)'), 'executable scheme');
     basicrum_assert_false(Config::isValidBeaconEndpoint('https:///missing-host'), 'missing host');
     basicrum_assert_false(Config::isValidBeaconEndpoint(' https://collector.test'), 'untrimmed URL');
+    basicrum_assert_false(
+        Config::isValidBeaconEndpoint('https://user:secret@collector.test/beacon'),
+        'embedded endpoint credentials'
+    );
+    basicrum_assert_false(
+        Config::isValidBeaconEndpoint('https://collector.test/beacon#client-only'),
+        'endpoint fragment'
+    );
     basicrum_assert_true(
         Config::isValidBrumSiteId('550e8400-e29b-41d4-a716-446655440000'),
         'UUIDv4 should be accepted'
@@ -69,6 +79,48 @@ $tests['validators accept only supported endpoint and UUIDv4 values'] = function
     basicrum_assert_same(0, Config::normalizeWaitMilliseconds(-1), 'negative wait');
     basicrum_assert_same(30000, Config::normalizeWaitMilliseconds(90000), 'bounded wait');
     basicrum_assert_same(0, Config::normalizeWaitMilliseconds('not-a-number'), 'invalid wait');
+};
+
+$tests['legacy consent options preserve only the effective saved value'] = function (): void {
+    $default = ScopeConfigInterface::SCOPE_TYPE_DEFAULT;
+    $manual = new ConsentMode(
+        new BasicrumTestScopeConfig([
+            basicrum_test_key($default, 0, Config::XML_PATH_CONSENT_MODE) => Config::CONSENT_MODE_MANUAL,
+        ]),
+        new BasicrumTestRequest()
+    );
+    basicrum_assert_same(
+        [Config::CONSENT_MODE_MANUAL],
+        array_column($manual->toOptionArray(), 'value'),
+        'new configurations must not offer legacy modes'
+    );
+
+    $legacy = new ConsentMode(
+        new BasicrumTestScopeConfig([
+            basicrum_test_key($default, 0, Config::XML_PATH_CONSENT_MODE) => 'explicit',
+            basicrum_test_key(ScopeInterface::SCOPE_WEBSITE, 'eu', Config::XML_PATH_CONSENT_MODE) => 'cookie',
+            basicrum_test_key(ScopeInterface::SCOPE_STORE, 'bg', Config::XML_PATH_CONSENT_MODE) => 'gdpr',
+        ]),
+        new BasicrumTestRequest(['store' => 'bg'])
+    );
+    basicrum_assert_same(
+        [Config::CONSENT_MODE_MANUAL, 'gdpr'],
+        array_column($legacy->toOptionArray(), 'value'),
+        'selected store legacy value must remain available'
+    );
+
+    $inherited = new ConsentMode(
+        new BasicrumTestScopeConfig([
+            basicrum_test_key($default, 0, Config::XML_PATH_CONSENT_MODE) => 'explicit',
+            basicrum_test_key(ScopeInterface::SCOPE_WEBSITE, 'eu', Config::XML_PATH_CONSENT_MODE) => 'cookie',
+        ], ['bg' => 'eu']),
+        new BasicrumTestRequest(['store' => 'bg'])
+    );
+    basicrum_assert_same(
+        [Config::CONSENT_MODE_MANUAL, 'cookie'],
+        array_column($inherited->toOptionArray(), 'value'),
+        'effective inherited legacy value must remain available'
+    );
 };
 
 $tests['save backends validate normalize and honor the same-form HTTP decision'] = function (): void {
@@ -93,6 +145,15 @@ $tests['save backends validate normalize and honor the same-form HTTP decision']
     ]);
     $developmentEndpoint->beforeSave();
     basicrum_assert_same('http://127.0.0.1:8080/beacon', $developmentEndpoint->getValue(), 'HTTP exception');
+
+    $invalidEndpoint = new BeaconEndpoint($context, $registry, $scopeConfig, $cacheTypeList, $storeManager);
+    $invalidEndpoint->setValue('https://user:secret@collector.example.test/beacon');
+    try {
+        $invalidEndpoint->beforeSave();
+        throw new RuntimeException('credential-bearing endpoint did not throw');
+    } catch (LocalizedException $exception) {
+        basicrum_assert_contains('without embedded credentials', $exception->getMessage(), 'endpoint validation error');
+    }
 
     $scopedConfig = new BasicrumTestScopeConfig([
         basicrum_test_key(ScopeInterface::SCOPE_WEBSITE, 'base', Config::XML_PATH_DEVELOPMENT_MODE) => '1',
@@ -148,6 +209,13 @@ $tests['runtime gate requires enable endpoint and site identity'] = function ():
 
     $base[basicrum_test_key($default, 0, Config::XML_PATH_BRUM_SITE_ID)] =
         '550e8400-e29b-41d4-a716-446655440000';
+    $base[basicrum_test_key($default, 0, Config::XML_PATH_BEACON_ENDPOINT)] =
+        'https://collector.test/beacon#client-only';
+    $badEndpoint = new Config(new BasicrumTestScopeConfig($base));
+    basicrum_assert_same(null, $badEndpoint->getRuntimeConfig($default), 'fragment endpoint must be inactive');
+    basicrum_assert_same('invalid_endpoint', $badEndpoint->getStatus($default)['state'], 'admin invalid endpoint');
+
+    $base[basicrum_test_key($default, 0, Config::XML_PATH_BEACON_ENDPOINT)] = 'https://collector.test/beacon';
     $valid = new Config(new BasicrumTestScopeConfig($base));
     $runtime = $valid->getRuntimeConfig($default);
     basicrum_assert_same('implicit', $runtime['consent_mode'], 'legacy value must be retained');

@@ -177,6 +177,16 @@ class Config
             return false;
         }
 
+        // Credentials would be exposed in storefront configuration, while a
+        // fragment is never part of an HTTP request. Query strings remain
+        // supported for compatibility with collectors that require them.
+        if (array_key_exists('user', $parts)
+            || array_key_exists('pass', $parts)
+            || array_key_exists('fragment', $parts)
+        ) {
+            return false;
+        }
+
         return in_array(strtolower((string) $parts['scheme']), ['http', 'https'], true);
     }
 

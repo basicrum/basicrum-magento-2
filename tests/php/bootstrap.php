@@ -79,6 +79,13 @@ namespace Magento\Framework\App\Config {
     }
 }
 
+namespace Magento\Framework\App {
+    interface RequestInterface
+    {
+        public function getParam($key, $defaultValue = null);
+    }
+}
+
 namespace Magento\Framework\App\Cache {
     interface TypeListInterface
     {
@@ -106,6 +113,13 @@ namespace Magento\Framework\Model\ResourceModel {
 namespace Magento\Framework\Data\Collection {
     abstract class AbstractDb
     {
+    }
+}
+
+namespace Magento\Framework\Data {
+    interface OptionSourceInterface
+    {
+        public function toOptionArray(): array;
     }
 }
 
@@ -138,6 +152,7 @@ namespace Magento\Framework\View\Element\Block {
 
 namespace {
     use Magento\Framework\App\Config\ScopeConfigInterface;
+    use Magento\Framework\App\RequestInterface;
     use Magento\Store\Model\ScopeInterface;
 
     if (!function_exists('__')) {
@@ -225,6 +240,19 @@ namespace {
         public function getStore($code = null): BasicrumTestStore
         {
             return new BasicrumTestStore($this->storeWebsites[(string) $code] ?? 'base');
+        }
+    }
+
+    final class BasicrumTestRequest implements RequestInterface
+    {
+        /** @param array<string, mixed> $params */
+        public function __construct(private array $params = [])
+        {
+        }
+
+        public function getParam($key, $defaultValue = null)
+        {
+            return $this->params[$key] ?? $defaultValue;
         }
     }
 

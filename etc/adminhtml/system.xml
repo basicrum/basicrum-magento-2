@@ -35,7 +35,7 @@
                        showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Beacon Endpoint</label>
                     <backend_model>BasicRum\Analytics\Model\System\Config\Backend\BeaconEndpoint</backend_model>
-                    <comment>Valid HTTP or HTTPS collector URL. Required when Basicrum is enabled. HTTP is upgraded to HTTPS unless the explicit development exception is enabled.</comment>
+                    <comment>Valid HTTP or HTTPS collector URL without embedded credentials or a fragment. Endpoint query strings remain supported. Required when Basicrum is enabled. HTTP is upgraded to HTTPS unless the explicit development exception is enabled.</comment>
                 </field>
                 <field id="brum_site_id" translate="label comment" type="text" sortOrder="30"
                        showInDefault="1" showInWebsite="1" showInStore="1">
@@ -63,7 +63,7 @@
                        showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Consent Tool Connection</label>
                     <source_model>BasicRum\Analytics\Block\Adminhtml\System\Config\ConsentMode</source_model>
-                    <comment>Phase 1 supports manual callbacks. Legacy mode values remain stored but do not imply an allow decision.</comment>
+                    <comment>Phase 1 supports manual callbacks. The currently effective legacy value remains visible for compatibility, but other legacy modes cannot be newly selected and none implies an allow decision.</comment>
                     <depends>
                         <field id="enabled">1</field>
                     </depends>

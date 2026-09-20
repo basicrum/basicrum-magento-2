@@ -9,10 +9,10 @@ Brum Site ID are valid.
 
 The Phase 1 integration baseline is Magento Open Source **2.4.7-p10** with
 **PHP 8.3** and Composer 2.10. The complete disposable-store dependency set is
-pinned in `tests/integration/baseline.env`. Composer metadata allows PHP 8.2
-through 8.4 and Magento framework 103.x so the module can be evaluated on the
-adjacent Magento 2.4 release lines, but those combinations are not represented
-as integration-tested here.
+pinned in `tests/integration/baseline.env`. Focused PHP checks run on PHP 8.2,
+8.3, and 8.4. Composer metadata allows Magento framework 103.x so the module
+can be evaluated on adjacent Magento 2.4 release lines, but only the pinned
+PHP 8.3 combination is declared for disposable Magento integration testing.
 
 ## Installation
 
@@ -34,8 +34,10 @@ Magento default, website, and store inheritance.
 Required settings:
 
 - **Enable Basicrum**: new installations default to No.
-- **Beacon Endpoint**: a valid HTTP or HTTPS collector URL. HTTPS is enforced
-  unless the explicit development exception is enabled.
+- **Beacon Endpoint**: a valid HTTP or HTTPS collector URL without embedded
+  credentials or a fragment. Endpoint query strings remain supported for
+  compatibility. HTTPS is enforced unless the explicit development exception
+  is enabled.
 - **Brum Site ID**: a UUIDv4 copied from the Basicrum backoffice.
 
 If any effective value is disabled, missing, malformed, or unsafe, the
@@ -116,8 +118,10 @@ Review the following before enabling the upgraded module:
   Value `1` means consent-controlled loading. Invalid or absent effective
   values fail to consent-controlled behavior.
 - Legacy `basicrum/consent/mode` values (`explicit`, `implicit`, `cookie`, and
-  `gdpr`) are retained and shown in Admin, but all are treated as manual
-  integration metadata. None counts as an allow decision.
+  `gdpr`) are retained. Only the currently effective legacy value is shown in
+  Admin alongside Manual callbacks, so historical configuration is preserved
+  without offering other legacy modes for new selection. All legacy values are
+  manual-integration metadata and none counts as an allow decision.
 - The old five-second wait was hardcoded and had no stored setting. It is
   replaced with `basicrum/performance/wait_after_onload` and `delay_ms`, both
   defaulting to off/zero. Administrators who need the former timing must
