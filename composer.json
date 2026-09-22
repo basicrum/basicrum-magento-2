@@ -28,6 +28,9 @@
         }
     ],
     "autoload": {
+        "exclude-from-classmap": [
+            "/tests/"
+        ],
         "files": [
             "registration.php"
         ],

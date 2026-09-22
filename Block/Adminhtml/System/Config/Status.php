@@ -5,7 +5,6 @@ namespace Basicrum\Analytics\Block\Adminhtml\System\Config;
 
 use Basicrum\Analytics\Model\Config;
 use Magento\Backend\Block\Template\Context;
-use Magento\Config\Block\System\Config\Form\Field;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\Data\Form\Element\AbstractElement;
 use Magento\Store\Model\ScopeInterface;
@@ -13,7 +12,7 @@ use Magento\Store\Model\ScopeInterface;
 /**
  * Explains the effective monitoring state for the selected admin scope.
  */
-class Status extends Field
+class Status extends ReadOnlyField
 {
     public function __construct(
         Context $context,

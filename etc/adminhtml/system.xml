@@ -52,6 +52,7 @@
             <group id="consent" translate="label comment" type="text" sortOrder="20"
                    showInDefault="1" showInWebsite="1" showInStore="1">
                 <label>Visitor Consent</label>
+                <attribute type="expanded">1</attribute>
                 <comment>Basicrum does not show a consent banner or persist its own consent decision. Connect your site's consent tool with both public callbacks when consent is required.</comment>
                 <field id="enabled" translate="label comment" type="select" sortOrder="10"
                        showInDefault="1" showInWebsite="1" showInStore="1">
@@ -71,6 +72,7 @@
                 <field id="integration_help" translate="label" type="note" sortOrder="30"
                        showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Manual Callback API</label>
+                    <frontend_model>Basicrum\Analytics\Block\Adminhtml\System\Config\ReadOnlyField</frontend_model>
                     <comment><![CDATA[
                         Call <code>window.OPT_IN_BASICRUM_LOADER_WRAPPER()</code> only after your consent tool authoritatively allows performance monitoring on the current page. Call <code>window.OPT_OUT_BASICRUM_LOADER_WRAPPER()</code> for denial, expiry, or withdrawal. A denial before loading may be followed by allow on the same page. After withdrawal during download or after initialization, reload before re-granting. Calls made before the footer loader registers these functions are not queued.
                     ]]></comment>
@@ -82,6 +84,7 @@
             <group id="privacy" translate="label" type="text" sortOrder="30"
                    showInDefault="1" showInWebsite="1" showInStore="1">
                 <label>Privacy</label>
+                <attribute type="expanded">1</attribute>
                 <field id="strip_query_string" translate="label comment" type="select" sortOrder="10"
                        showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Strip Query Strings</label>

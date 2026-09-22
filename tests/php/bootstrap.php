@@ -80,6 +80,26 @@ namespace Magento\Framework\App\Config {
 }
 
 namespace Magento\Framework\App {
+    class Area
+    {
+        public const AREA_FRONTEND = 'frontend';
+    }
+
+    class State
+    {
+        public function __construct(private ?string $areaCode)
+        {
+        }
+
+        public function getAreaCode(): string
+        {
+            if ($this->areaCode === null) {
+                throw new \Magento\Framework\Exception\LocalizedException('Area code is not set');
+            }
+            return $this->areaCode;
+        }
+    }
+
     interface RequestInterface
     {
         public function getParam($key, $defaultValue = null);

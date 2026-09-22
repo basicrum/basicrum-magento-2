@@ -13,13 +13,17 @@ The storefront CSP collector now consumes the same validated effective runtime
 configuration as rendering. While monitoring is active, it adds only the
 normalized endpoint origin to `connect-src` and `img-src`, covering
 send-beacon/XHR and image fallbacks without wildcards. Disabled, incomplete,
-or invalid configuration adds nothing. The collector is registered in
-frontend-only dependency injection so it does not broaden Admin CSP.
+or invalid configuration adds nothing. The collector is registered in global
+dependency injection alongside Magento's core collectors; area-level array
+registration would replace them. An explicit frontend runtime guard keeps
+Basicrum's contribution out of Admin, API, cron, and unset-area contexts.
 
 Focused tests cover the inactive gate, production HTTPS normalization,
 path/query exclusion, port retention, both directives, and the explicit
-development HTTP exception. Native verification on the disposable Magento
-baseline is still required and is not claimed by this implementation.
+development HTTP exception. Native tests check core whitelist preservation,
+an enforcing checkout response, and the absence of Basicrum's origin in Admin.
+Execution results and baseline limitations are recorded in
+`OPUS-REVIEW-FOLLOWUPS.md`; the pinned pre-release gate remains required.
 
 ## CR-D-002: Full-page-cache invalidation after Basicrum configuration changes
 

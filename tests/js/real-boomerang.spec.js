@@ -4,7 +4,7 @@ const { test, expect } = require("@playwright/test");
 
 const root = path.resolve(__dirname, "../..");
 const shopUrl = "https://shop.example.test/";
-const boomerangUrl = "https://assets.example.test/boomerang.js";
+const boomerangUrl = "https://shop.test/static/version123/Basicrum_Analytics/js/boomr/boomerang-1.815.60.cutting-edge.min.js";
 const beaconUrl = "https://collector.example.test/beacon";
 const siteId = "550e8400-e29b-41d4-a716-446655440000";
 const realBoomerang = fs.readFileSync(
@@ -74,55 +74,12 @@ async function prepareRealPage(page, options = {}) {
   });
 
   await page.goto(pageUrl, options.referrerUrl ? { referer: options.referrerUrl } : undefined);
-  await page.evaluate(({ bundleUrl, collectorUrl, stripQueryString, id, waitMs }) => {
-    window.BOOMR = { url: bundleUrl };
-    window.BOOMR_mq = [
-      ["addVar", "p_type", "product"],
-      ["addVar", "p_gen", "mage2"],
-      ["addVar", "brum_site_id", id]
-    ];
-
-    if (waitMs > 0) {
-      const boomerang = window.BOOMR;
-      boomerang.plugins = boomerang.plugins || {};
-      boomerang.plugins.WaitAfterOnload = {
-        complete: false,
-        timer: null,
-        init() {
-          boomerang.subscribe("page_ready", function() {
-            this.timer = window.setTimeout(() => {
-              this.timer = null;
-              if (window.basicRumConsentWithdrawn) {
-                return;
-              }
-              this.complete = true;
-              boomerang.sendBeacon();
-            }, waitMs);
-            window.__basicrumWaitScheduled = true;
-          }, {}, this);
-        },
-        is_complete() {
-          return this.complete;
-        }
-      };
-    }
-
-    window.basicRumBoomerangConfig = {
-      beacon_url: collectorUrl,
-      instrument_xhr: false,
-      strip_query_string: stripQueryString,
-      Continuity: { enabled: true },
-      ResourceTiming: { enabled: true, splitAtPath: true },
-      secure_cookie: true,
-      same_site_cookie: "Strict"
-    };
-  }, {
-    bundleUrl: boomerangUrl,
-    collectorUrl: beaconUrl,
-    stripQueryString: Boolean(options.stripQueryString),
-    id: siteId,
-    waitMs: options.waitMs || 0
-  });
+  // This is freshly rendered by the real Config, Footer and footer.phtml in
+  // global setup, not a JavaScript reimplementation of the PHP wait plugin.
+  const fixtures = JSON.parse(fs.readFileSync(path.join(root, ".test-results/rendered-footer.json"), "utf8"));
+  const fixture = options.fixture || (options.stripQueryString ? "redacted" : "default");
+  expect(fixtures[fixture]).toBeTruthy();
+  await page.addScriptTag({ content: fixtures[fixture] });
 
   return {
     downloadStarted,
@@ -137,6 +94,22 @@ async function waitForRealBoomerang(page) {
   await expect.poll(
     () => page.evaluate(() => window.BOOMR && window.BOOMR.version)
   ).toBe("1.815.60");
+}
+
+async function pauseWaitClock(page) {
+  await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
+  await page.clock.pauseAt(new Date("2026-01-01T00:00:01Z"));
+}
+
+async function waitForRenderedTimer(page) {
+  await expect.poll(async () => {
+    // Advance deferred Boomerang initialization, without advancing the 1s wait.
+    await page.clock.runFor(10);
+    return page.evaluate(() => {
+      const plugin = window.BOOMR?.plugins?.WaitAfterOnload;
+      return Boolean(plugin && plugin.timer !== null && !plugin.complete);
+    });
+  }).toBe(true);
 }
 
 for (const standardLoader of ["boomerang-loader-v15.js", "boomerang-loader-v15.min.js"]) {
@@ -159,7 +132,7 @@ for (const standardLoader of ["boomerang-loader-v15.js", "boomerang-loader-v15.m
     const request = gate.beaconRequestData()[0];
     const parameters = requestParameters(request);
     expect(parameters.get("u")).toBe(`${shopUrl}?qs-redacted`);
-    expect(parameters.get("p_type")).toBe("product");
+    expect(parameters.get("p_type")).toBe("Product");
     expect(parameters.get("p_gen")).toBe("mage2");
     expect(parameters.get("brum_site_id")).toBe(siteId);
     expect(parameters.get("r")).toContain("?qs-redacted");
@@ -173,6 +146,34 @@ for (const consentLoader of [
   "consent-boomerang-loader-v1-15.min.js"
 ]) {
   test.describe(`real Boomerang consent lifecycle: ${consentLoader}`, () => {
+    test("the rendered wait plugin delays the beacon, then completes", async ({ page }) => {
+      await pauseWaitClock(page);
+      const gate = await prepareRealPage(page, { fixture: "delayed" });
+      await page.addScriptTag({ path: loaderPath(consentLoader) });
+      await page.evaluate(() => window.OPT_IN_BASICRUM_LOADER_WRAPPER());
+      await gate.downloadStarted;
+      await waitForRealBoomerang(page);
+      await waitForRenderedTimer(page);
+      await page.clock.runFor(500);
+      expect(gate.beaconRequests()).toBe(0);
+      expect(await page.evaluate(() => window.BOOMR.plugins.WaitAfterOnload.is_complete())).toBe(false);
+      await page.clock.runFor(600);
+      await expect.poll(() => gate.beaconRequests()).toBe(1);
+      expect(await page.evaluate(() => window.BOOMR.plugins.WaitAfterOnload.is_complete())).toBe(true);
+      expect(await page.evaluate(() => window.BOOMR.plugins.WaitAfterOnload.timer)).toBe(null);
+      expect(requestParameters(gate.beaconRequestData()[0]).get("brum_site_id")).toBe(siteId);
+    });
+
+    for (const fixture of ["default", "disabledWait", "zeroWait"]) {
+      test(`rendered ${fixture} configuration omits the wait plugin`, async ({ page }) => {
+        const gate = await prepareRealPage(page, { fixture });
+        expect(await page.evaluate(() => window.BOOMR.plugins?.WaitAfterOnload)).toBeUndefined();
+        await page.addScriptTag({ path: loaderPath(consentLoader) });
+        await page.evaluate(() => window.OPT_IN_BASICRUM_LOADER_WRAPPER());
+        await expect.poll(() => gate.beaconRequests()).toBeGreaterThan(0);
+      });
+    }
+
     test("is silent before allow and loads once after repeated allow", async ({ context, page }) => {
       const gate = await prepareRealPage(page);
       await page.addScriptTag({ path: loaderPath(consentLoader) });
@@ -226,15 +227,18 @@ for (const consentLoader of [
     });
 
     test("withdrawal after initialization cancels the pending page-load beacon", async ({ context, page }) => {
-      const gate = await prepareRealPage(page, { waitMs: 750 });
+      await pauseWaitClock(page);
+      const gate = await prepareRealPage(page, { fixture: "delayed" });
       await page.addScriptTag({ path: loaderPath(consentLoader) });
       await page.evaluate(() => window.OPT_IN_BASICRUM_LOADER_WRAPPER());
       await gate.downloadStarted;
       await waitForRealBoomerang(page);
-      await page.waitForFunction(() => window.__basicrumWaitScheduled === true);
+      await waitForRenderedTimer(page);
       await page.evaluate(() => window.OPT_OUT_BASICRUM_LOADER_WRAPPER());
+      expect(await page.evaluate(() => window.BOOMR.plugins.WaitAfterOnload.timer)).toBe(null);
       await page.evaluate(() => window.OPT_IN_BASICRUM_LOADER_WRAPPER());
-      await page.waitForTimeout(1000);
+      await page.clock.runFor(1500);
+      expect(await page.evaluate(() => window.BOOMR.plugins.WaitAfterOnload.is_complete())).toBe(false);
 
       expect(gate.beaconRequests()).toBe(0);
       expect(gate.boomerangRequests()).toBe(1);

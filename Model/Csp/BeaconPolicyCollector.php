@@ -6,6 +6,9 @@ namespace Basicrum\Analytics\Model\Csp;
 use Basicrum\Analytics\Model\Config;
 use Magento\Csp\Api\PolicyCollectorInterface;
 use Magento\Csp\Model\Policy\FetchPolicy;
+use Magento\Framework\App\Area;
+use Magento\Framework\App\State;
+use Magento\Framework\Exception\LocalizedException;
 
 /**
  * Adds the validated effective collector origin to storefront fetch policies.
@@ -15,7 +18,8 @@ class BeaconPolicyCollector implements PolicyCollectorInterface
     private const DIRECTIVES = ['connect-src', 'img-src'];
 
     public function __construct(
-        private Config $config
+        private Config $config,
+        private State $appState
     ) {
     }
 
@@ -24,6 +28,17 @@ class BeaconPolicyCollector implements PolicyCollectorInterface
      */
     public function collect(array $defaultPolicies = []): array
     {
+        // Register alongside core collectors in global DI; area-level arrays
+        // replace them. Keep the contribution itself strictly storefront-only.
+        try {
+            if ($this->appState->getAreaCode() !== Area::AREA_FRONTEND) {
+                return $defaultPolicies;
+            }
+        } catch (LocalizedException $exception) {
+            // CLI/bootstrap contexts may not have selected an area yet.
+            return $defaultPolicies;
+        }
+
         $runtimeConfig = $this->config->getRuntimeConfig();
         if ($runtimeConfig === null) {
             return $defaultPolicies;

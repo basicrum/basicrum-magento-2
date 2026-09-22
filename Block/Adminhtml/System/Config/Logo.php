@@ -22,6 +22,6 @@ class Logo extends Field
 
     public function getLogoUrl(): string
     {
-        return $this->getViewFileUrl('Basicrum_Analytics::images/basicrum-log.svg');
+        return $this->getViewFileUrl('Basicrum_Analytics::images/basicrum-logo.png');
     }
 }

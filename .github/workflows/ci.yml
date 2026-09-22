@@ -19,6 +19,11 @@ jobs:
       - name: Validate Composer metadata strictly
         run: docker run --rm -v "$GITHUB_WORKSPACE:/app" -w /app composer:2.10 validate --strict --no-check-publish
 
+      - name: Check optimized production classmap
+        run: |
+          docker run --rm -v "$GITHUB_WORKSPACE:/app" -w /app composer:2.10 dump-autoload --optimize --strict-psr --no-dev --no-scripts --no-plugins --no-interaction
+          docker run --rm -v "$GITHUB_WORKSPACE:/module:ro" -w /module php:8.3-cli php tests/php/check-classmap.php
+
   php:
     name: PHP ${{ matrix.php }} validation
     runs-on: ubuntu-24.04

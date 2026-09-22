@@ -9,6 +9,41 @@ use Magento\Framework\App\Response\Http as HttpResponse;
 
 class PageTypeDetector implements PageTypeDetectorInterface
 {
+    /**
+     * Magento 1 labels, selected using Magento 2's final dispatched action.
+     * See docs/PAGE-TYPE-ALIGNMENT.md for route evidence and fallback policy.
+     */
+    private const PAGE_TYPES = [
+        'cms_noroute_index' => '404 Not Found',
+        'cms_index_defaultnoroute' => '404 Not Found',
+        'cms_index_index' => 'Home',
+        'cms_page_view' => 'CMS Page',
+        'catalog_category_view' => 'Category',
+        'catalog_product_view' => 'Product',
+        'catalogsearch_result_index' => 'Search',
+        'catalogsearch_advanced_index' => 'Advanced Search',
+        'checkout_cart_index' => 'Cart',
+        'checkout_index_index' => 'Checkout',
+        'checkout_onepage_success' => 'Checkout Success',
+        'customer_account_login' => 'Login',
+        'customer_account_create' => 'Register',
+        'customer_account_index' => 'Account',
+        'customer_account_logoutsuccess' => 'Logout Success',
+        'contact_index_index' => 'Contact',
+        'sales_guest_form' => 'Orders and Returns',
+        'customer_account_edit' => 'Customer Account Edit',
+        'sales_order_view' => 'Order View',
+        'paypal_billing_agreement_index' => 'Billing Agreements',
+        'paypal_billing_agreement_view' => 'Billing Agreement View',
+        'sales_guest_view' => 'Guest Order View',
+        'customer_address_form' => 'Customer Address Edit',
+        'customer_address_index' => 'Customer Address List',
+        'wishlist_index_configure' => 'Wishlist Item Configure',
+        'wishlist_index_index' => 'Wishlist Items List',
+        'sales_order_history' => 'Order History',
+        'customer_account_forgotpassword' => 'Forgot Password',
+    ];
+
     public function __construct(
         private HttpRequest $request,
         private HttpResponse $response
@@ -22,36 +57,20 @@ class PageTypeDetector implements PageTypeDetectorInterface
      */
     public function getPageType(): string
     {
-        // Check for error pages first
+        // A missing entity can return 404 even when its action is otherwise known.
         if ($this->response->getStatusCode() === 404) {
-            return '404_not_found';
+            return '404 Not Found';
         }
 
-        // Get full action name
-        $fullActionName = $this->request->getFullActionName();
+        $fullActionName = strtolower($this->request->getFullActionName());
 
-        // Common page types based on full action name
-        $pageTypeMap = [
-            'cms_index_index' => 'home',
-            'cms_page_view' => 'cms_page',
-            'catalog_product_view' => 'product',
-            'catalog_category_view' => 'category',
-            'checkout_index_index' => 'checkout',
-            'checkout_cart_index' => 'cart',
-            'customer_account_login' => 'customer_login',
-            'customer_account_create' => 'customer_register',
-            'customer_account_index' => 'customer_account',
-            'sales_order_history' => 'order_history',
-            'contact_index_index' => 'contact',
-            'catalogsearch_result_index' => 'search_results',
-        ];
-
-        if (isset($pageTypeMap[$fullActionName])) {
-            return $pageTypeMap[$fullActionName];
+        // Native Http returns "__" when route/controller/action are all unset.
+        if ($fullActionName === '' || trim($fullActionName, '_') === '') {
+            return 'unknown';
         }
 
-        // Default fallback
-        return 'unmapped_' . $fullActionName;
+        // Do not infer a type from generic layout handles or URL/entity parameters.
+        return self::PAGE_TYPES[$fullActionName] ?? 'unmapped_' . $fullActionName;
     }
 
     /**
@@ -61,7 +80,7 @@ class PageTypeDetector implements PageTypeDetectorInterface
      */
     public function isHomePage(): bool
     {
-        return $this->getPageType() === 'home';
+        return $this->getPageType() === 'Home';
     }
 
     /**
@@ -71,7 +90,7 @@ class PageTypeDetector implements PageTypeDetectorInterface
      */
     public function isProductPage(): bool
     {
-        return $this->getPageType() === 'product';
+        return $this->getPageType() === 'Product';
     }
 
     /**
@@ -81,6 +100,6 @@ class PageTypeDetector implements PageTypeDetectorInterface
      */
     public function isCheckoutPage(): bool
     {
-        return $this->getPageType() === 'checkout';
+        return $this->getPageType() === 'Checkout';
     }
 }

@@ -70,8 +70,29 @@ request were not borrowed.
 
 ## Deferred boundaries
 
-D-001 page vocabulary, D-002 staff exclusion, D-003 placement/readiness queues,
-and D-004 cross-plugin wording remain unchanged. Automatic provider adapters,
+The later, explicitly approved Magento 2-to-Magento 1 `p_type` alignment is
+recorded in `PAGE-TYPE-ALIGNMENT.md` for central-task incorporation under
+D-001, with additional real-beacon coverage under R-008. It implements all 27
+Magento 1 labels using Magento 2 actions,
+preserves `p_gen=mage2`, and defines unmapped/unknown handling. This does not
+implement a WordPress-led shared taxonomy or migrate historical report data.
+Magento 1, WordPress, and the shared ledger are unchanged.
+
+Native checkout verification also found and corrected an R-007 CSP
+registration defect: the frontend DI array replaced Magento's core collectors.
+Global DI registration plus a frontend-only runtime guard now preserves them;
+the browser harness checks the real merged policy header. See the alignment
+notes for current execution results and limitations, separate from the original
+Phase 1 verification snapshot below.
+
+The approved Opus review follow-ups are recorded in `OPUS-REVIEW-FOLLOWUPS.md`.
+They strengthen R-007/R-008 CSP and rendered-wait coverage, R-009 production
+autoload/CI checks, R-002 scoped Admin presentation, and R-010 documentation.
+That report contains the newer local execution results and explicitly separates
+the supplemental 2.4.9 store from the still-required pinned release baseline.
+
+D-002 staff exclusion, D-003 placement/readiness queues, and D-004 cross-plugin
+wording remain deferred. Automatic provider adapters,
 a broad optimizer matrix, package/release publishing, and module-level license
 text approval are not completed by Phase 1. The full-page-cache finding
 CR-D-002 recorded in `DEFERRED-CODE-REVIEW-FINDINGS.md` remains explicitly

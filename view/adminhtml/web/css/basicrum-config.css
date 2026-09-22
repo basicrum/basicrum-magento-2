@@ -8,6 +8,8 @@
 }
 
 .basicrum-config-logo__image {
-    height: 35px;
-    width: 35px;
+    display: block;
+    flex: 0 0 auto;
+    height: 48px;
+    width: 48px;
 }

@@ -12,6 +12,8 @@ use Basicrum\Analytics\Model\System\Config\Backend\WaitMilliseconds;
 use Basicrum\Analytics\ViewModel\Footer;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\App\Cache\TypeListInterface;
+use Magento\Framework\App\Area;
+use Magento\Framework\App\State;
 use Magento\Framework\App\Request\Http as HttpRequest;
 use Magento\Framework\App\Response\Http as HttpResponse;
 use Magento\Framework\Exception\LocalizedException;
@@ -30,6 +32,7 @@ require $root . '/ViewModel/Footer.php';
 require $root . '/Model/System/Config/Backend/BeaconEndpoint.php';
 require $root . '/Model/System/Config/Backend/BrumSiteId.php';
 require $root . '/Model/System/Config/Backend/WaitMilliseconds.php';
+require __DIR__ . '/footer-fixture.php';
 
 /** @var array<string, Closure> $tests */
 $tests = [];
@@ -174,6 +177,7 @@ $tests['technical identity and direct Magento dependencies are declared consiste
     basicrum_assert_same('^101.2', $composer['require']['magento/module-config'], 'Config dependency');
     basicrum_assert_same('^100.4', $composer['require']['magento/module-csp'], 'CSP dependency');
     basicrum_assert_same('^101.1', $composer['require']['magento/module-store'], 'Store dependency');
+    basicrum_assert_same(['/tests/'], $composer['autoload']['exclude-from-classmap'], 'test doubles excluded from production classmap');
     basicrum_assert_same(
         ['Basicrum\\Analytics\\' => ''],
         $composer['autoload']['psr-4'],
@@ -223,14 +227,21 @@ $tests['technical identity and direct Magento dependencies are declared consiste
         'DI preference implementation'
     );
 
-    $frontendDi = simplexml_load_file($root . '/etc/frontend/di.xml');
-    $collector = $frontendDi->xpath('//item[@name="basicrum_beacon"]');
-    basicrum_assert_same(1, count($collector), 'frontend CSP collector declaration');
+    $collector = $di->xpath('//type[@name="Magento\\Csp\\Model\\CompositePolicyCollector"]/arguments/argument[@name="collectors"]/item[@name="basicrum_beacon"]');
+    basicrum_assert_same(1, count($collector), 'CSP collector merges at the global DI stage');
     basicrum_assert_same(
         'Basicrum\\Analytics\\Model\\Csp\\BeaconPolicyCollector',
         trim((string) $collector[0]),
         'frontend CSP collector class'
     );
+    foreach (glob($root . '/etc/*/di.xml') as $areaDiFile) {
+        $areaDi = simplexml_load_file($areaDiFile);
+        basicrum_assert_same(
+            [],
+            $areaDi->xpath('//type[@name="Magento\\Csp\\Model\\CompositePolicyCollector"]/arguments/argument[@name="collectors"]'),
+            $areaDiFile . ' must not replace core CSP collectors'
+        );
+    }
 
     $frontendLayout = simplexml_load_file($root . '/view/frontend/layout/default.xml');
     $footerBlock = $frontendLayout->xpath('//block[@name="basicrum.analytics.footer"]');
@@ -263,18 +274,18 @@ $tests['technical identity and direct Magento dependencies are declared consiste
         'Admin logo template alias'
     );
     basicrum_assert_contains(
-        'Basicrum_Analytics::images/basicrum-log.svg',
+        'Basicrum_Analytics::images/basicrum-logo.png',
         $logoBlock,
         'Admin logo asset alias'
     );
 
     foreach ([
         'Model/Csp/BeaconPolicyCollector.php',
-        'etc/frontend/di.xml',
+        'etc/di.xml',
         'view/adminhtml/layout/adminhtml_system_config_edit.xml',
         'view/adminhtml/templates/system/config/logo.phtml',
         'view/adminhtml/web/css/basicrum-config.css',
-        'view/adminhtml/web/images/basicrum-log.svg',
+        'view/adminhtml/web/images/basicrum-logo.png',
         'tests/integration/admin.spec.js',
         'tests/integration/release-gate.sh',
         'CHANGELOG.md',
@@ -645,6 +656,18 @@ $tests['system fields preserve default website and store inheritance'] = functio
         (string) $getField($xml, 'general', 'brum_site_id')->backend_model,
         'Site ID save validator'
     );
+    foreach (['monitoring_status' => 'Status', 'boomerang_version' => 'BoomerangVersion'] as $id => $renderer) {
+        basicrum_assert_same(
+            'Basicrum\\Analytics\\Block\\Adminhtml\\System\\Config\\' . $renderer,
+            (string) $getField($xml, 'general', $id)->frontend_model,
+            $id . ' display renderer'
+        );
+    }
+    basicrum_assert_same(
+        'Basicrum\\Analytics\\Block\\Adminhtml\\System\\Config\\ReadOnlyField',
+        (string) $getField($xml, 'consent', 'integration_help')->frontend_model,
+        'callback instructions use the display-only renderer'
+    );
 };
 
 $tests['template renders safely and selects consent or immediate loader'] = function () use ($root): void {
@@ -659,33 +682,7 @@ $tests['template renders safely and selects consent or immediate loader'] = func
         public function isCheckoutPage(): bool { return false; }
     };
 
-    $render = static function (array $values) use ($root, $detector): string {
-        $config = new Config(new BasicrumTestScopeConfig($values));
-        $footer = new Footer($detector, $config);
-        $block = new class($footer) {
-            public function __construct(private Footer $footer) {}
-            public function getViewModel(): Footer { return $this->footer; }
-            public function getViewFileUrl(string $asset): string
-            {
-                return 'https://shop.test/static/version123/' . str_replace('::', '/', $asset);
-            }
-        };
-        $secureRenderer = new class {
-            public function renderTag(string $tag, array $attributes, string $content, bool $textContent): string
-            {
-                $rendered = '';
-                foreach ($attributes as $name => $value) {
-                    $rendered .= ' ' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . '="'
-                        . htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8') . '"';
-                }
-                return '<' . $tag . $rendered . '>' . $content . '</' . $tag . '>';
-            }
-        };
-
-        ob_start();
-        include $root . '/view/frontend/templates/footer.phtml';
-        return (string) ob_get_clean();
-    };
+    $render = static fn (array $values): string => basicrum_render_footer($values, $detector);
 
     $default = ScopeConfigInterface::SCOPE_TYPE_DEFAULT;
     basicrum_assert_same('', $render([]), 'disabled render must be empty');
@@ -716,29 +713,88 @@ $tests['template renders safely and selects consent or immediate loader'] = func
     basicrum_assert_not_contains('consent-boomerang-loader-v1-15.min.js', $immediate, 'no consent loader');
 };
 
-$tests['page type detector uses the concrete HTTP response without changing public vocabulary'] = function (): void {
-    $notFound = new PageTypeDetector(new HttpRequest('cms_index_index'), new HttpResponse(404));
-    basicrum_assert_same('404_not_found', $notFound->getPageType(), '404 response page type');
+$tests['page type detector matches the exact Magento 1 labels on native Magento 2 actions'] = function (): void {
+    // Expectations frozen from Magento 1's PageTypeDetector.php at f8c4e2d5aa71.
+    // Route keys are deliberately Magento 2's, not copied Magento 1 handles.
+    $expected = [
+        'cms_noroute_index' => '404 Not Found',
+        'cms_index_defaultnoroute' => '404 Not Found',
+        'cms_index_index' => 'Home',
+        'cms_page_view' => 'CMS Page',
+        'catalog_category_view' => 'Category',
+        'catalog_product_view' => 'Product',
+        'catalogsearch_result_index' => 'Search',
+        'catalogsearch_advanced_index' => 'Advanced Search',
+        'checkout_cart_index' => 'Cart',
+        'checkout_index_index' => 'Checkout',
+        'checkout_onepage_success' => 'Checkout Success',
+        'customer_account_login' => 'Login',
+        'customer_account_create' => 'Register',
+        'customer_account_index' => 'Account',
+        'customer_account_logoutsuccess' => 'Logout Success',
+        'contact_index_index' => 'Contact',
+        'sales_guest_form' => 'Orders and Returns',
+        'customer_account_edit' => 'Customer Account Edit',
+        'sales_order_view' => 'Order View',
+        'paypal_billing_agreement_index' => 'Billing Agreements',
+        'paypal_billing_agreement_view' => 'Billing Agreement View',
+        'sales_guest_view' => 'Guest Order View',
+        'customer_address_form' => 'Customer Address Edit',
+        'customer_address_index' => 'Customer Address List',
+        'wishlist_index_configure' => 'Wishlist Item Configure',
+        'wishlist_index_index' => 'Wishlist Items List',
+        'sales_order_history' => 'Order History',
+        'customer_account_forgotpassword' => 'Forgot Password',
+    ];
 
-    $home = new PageTypeDetector(new HttpRequest('cms_index_index'), new HttpResponse(200));
-    basicrum_assert_same('home', $home->getPageType(), 'known page type');
-    basicrum_assert_true($home->isHomePage(), 'homepage helper remains available');
-    basicrum_assert_false($home->isProductPage(), 'product helper remains accurate');
-    basicrum_assert_false($home->isCheckoutPage(), 'checkout helper remains accurate');
+    foreach ($expected as $action => $label) {
+        foreach ([$action, strtoupper($action)] as $casedAction) {
+            $detector = new PageTypeDetector(new HttpRequest($casedAction), new HttpResponse(200));
+            basicrum_assert_same($label, $detector->getPageType(), $casedAction . ' exact label');
+            basicrum_assert_same($label === 'Home', $detector->isHomePage(), $casedAction . ' home helper');
+            basicrum_assert_same($label === 'Product', $detector->isProductPage(), $casedAction . ' product helper');
+            basicrum_assert_same($label === 'Checkout', $detector->isCheckoutPage(), $casedAction . ' checkout helper');
+            $footer = new Footer($detector, new Config(new BasicrumTestScopeConfig()));
+            basicrum_assert_same($label, $footer->getPageType(), $casedAction . ' reaches the view model unchanged');
+        }
+    }
+};
 
-    $unmapped = new PageTypeDetector(new HttpRequest('custom_route_index'), new HttpResponse(200));
-    basicrum_assert_same(
-        'unmapped_custom_route_index',
-        $unmapped->getPageType(),
-        'unmapped page type vocabulary remains compatible'
-    );
+$tests['page type detection prioritizes 404 and deliberately handles missing or unmapped actions'] = function (): void {
+    foreach (['cms_index_index', 'catalog_product_view', 'custom_route_index', '__'] as $action) {
+        $notFound = new PageTypeDetector(new HttpRequest($action), new HttpResponse(404));
+        basicrum_assert_same('404 Not Found', $notFound->getPageType(), $action . ' status takes precedence');
+        basicrum_assert_false($notFound->isHomePage(), '404 is not Home');
+        basicrum_assert_false($notFound->isProductPage(), '404 is not Product');
+        basicrum_assert_false($notFound->isCheckoutPage(), '404 is not Checkout');
+    }
+
+    foreach (['', '__'] as $action) {
+        $unknown = new PageTypeDetector(new HttpRequest($action), new HttpResponse(200));
+        basicrum_assert_same('unknown', $unknown->getPageType(), 'absent action has no fabricated label');
+    }
+
+    // Advanced-search results have no named Magento 1 mapping. Old Magento 1
+    // routes must not classify an unrelated Magento 2 extension's actions.
+    foreach ([
+        'custom_route_index',
+        'Custom_Route_Index',
+        'catalogsearch_advanced_result',
+        'checkout_onepage_index',
+        'contacts_index_index',
+        'sales_billing_agreement_view',
+    ] as $action) {
+        $unmapped = new PageTypeDetector(new HttpRequest($action), new HttpResponse(200));
+        basicrum_assert_same('unmapped_' . strtolower($action), $unmapped->getPageType(), $action . ' diagnostic fallback');
+    }
 };
 
 $tests['CSP collector follows the effective runtime gate and emits origin-only fetch policies'] = function (): void {
     $default = ScopeConfigInterface::SCOPE_TYPE_DEFAULT;
     $existingPolicy = new \Magento\Csp\Model\Policy\FetchPolicy('default-src', false, ["'self'"]);
 
-    $inactiveCollector = new BeaconPolicyCollector(new Config(new BasicrumTestScopeConfig()));
+    $frontend = new State(Area::AREA_FRONTEND);
+    $inactiveCollector = new BeaconPolicyCollector(new Config(new BasicrumTestScopeConfig()), $frontend);
     basicrum_assert_same(
         [$existingPolicy],
         $inactiveCollector->collect([$existingPolicy]),
@@ -753,7 +809,25 @@ $tests['CSP collector follows the effective runtime gate and emits origin-only f
             '550e8400-e29b-41d4-a716-446655440000',
         basicrum_test_key($default, 0, Config::XML_PATH_DEVELOPMENT_MODE) => '0',
     ];
-    $policies = (new BeaconPolicyCollector(new Config(new BasicrumTestScopeConfig($values))))->collect();
+    $activeCollector = new BeaconPolicyCollector(new Config(new BasicrumTestScopeConfig($values)), $frontend);
+    $policies = $activeCollector->collect();
+    basicrum_assert_same(
+        $existingPolicy,
+        $activeCollector->collect([$existingPolicy])[0],
+        'existing policies are passed through for Magento to merge, not replaced'
+    );
+
+    foreach (['adminhtml', 'webapi_rest', 'graphql', 'crontab', null] as $area) {
+        $nonFrontendCollector = new BeaconPolicyCollector(
+            new Config(new BasicrumTestScopeConfig($values)),
+            new State($area)
+        );
+        basicrum_assert_same(
+            [$existingPolicy],
+            $nonFrontendCollector->collect([$existingPolicy]),
+            'non-storefront and unset areas must not add collector policies'
+        );
+    }
 
     basicrum_assert_same(2, count($policies), 'collector must add both Boomerang fetch directives');
     basicrum_assert_same('connect-src', $policies[0]->getId(), 'XHR and sendBeacon directive');
@@ -774,7 +848,7 @@ $tests['CSP collector follows the effective runtime gate and emits origin-only f
     $values[basicrum_test_key($default, 0, Config::XML_PATH_BEACON_ENDPOINT)] =
         'http://127.0.0.1:8080/beacon';
     $developmentPolicies = (
-        new BeaconPolicyCollector(new Config(new BasicrumTestScopeConfig($values)))
+        new BeaconPolicyCollector(new Config(new BasicrumTestScopeConfig($values)), $frontend)
     )->collect();
     basicrum_assert_same(
         ['http://127.0.0.1:8080'],

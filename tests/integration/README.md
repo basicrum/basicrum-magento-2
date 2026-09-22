@@ -31,6 +31,63 @@ response, and proves that the new page still waits for a fresh allow decision.
 It therefore covers the real layout, template, CSP path, static asset URL,
 cached HTML, and bundled Boomerang rather than a copied fixture.
 
+The CSP assertions require the baseline's enabled `Magento_Paypal` module:
+`www.paypal.com` from its `csp_whitelist.xml` must survive alongside core
+`'self'` and the Basicrum collector in storefront fetch directives. A fresh
+empty-cart `checkout/` request is inspected without following its redirect,
+so the check requires an actual enforcing `Content-Security-Policy` header,
+not the cart page's report-only header. This check creates no order.
+
+Admin checks require at least one website/store view with single-store mode
+off and permission to view all three scopes. They verify that the collector
+origin is absent from Admin CSP, that the three display-only rows have no
+inheritance controls/scope labels, and that real settings retain those controls.
+Use a dedicated collector origin that no other module whitelists in Admin;
+otherwise origin absence cannot isolate Basicrum's contribution. Scope
+switching is read-only: the test never saves configuration.
+
+## Page-type alignment checks
+
+The suite also checks Magento 1-aligned labels in real beacons from public
+Magento 2 pages. It covers native route differences, HTTP 404, explicit
+unmapped fallback, and redirect destinations: a logged-out account is `Login`,
+and checkout/success without a valid cart/order session is `Cart`.
+
+Set `MAGENTO_SAMPLE_DATA=1` to include the Luma sample CMS page `about-us`,
+product `fusion-backpack.html`, and category `gear/bags.html`. These are skipped
+without that flag; all require installed, indexed, active sample data.
+
+To check an already configured disposable store without rewriting settings,
+run Playwright directly. `MAGENTO_BEACON_URL` and `MAGENTO_SITE_ID` can override
+the default test endpoint and identity; they must match the effective store
+configuration. Consent-controlled loading and query redaction must be enabled.
+The browser intercepts the configured endpoint and returns a local response;
+it does not forward beacons to that collector.
+
+```sh
+MAGENTO_STOREFRONT_URL=https://magento.test/ \
+MAGENTO_BEACON_URL=https://collector.basicrum.test/beacon \
+MAGENTO_SITE_ID=550e8400-e29b-41d4-a716-446655440000 \
+MAGENTO_SAMPLE_DATA=1 \
+npx playwright test --config=playwright.integration.config.js
+```
+
+`checkout-page-types.spec.js` is separately guarded. In addition to the URL
+and identity settings, it requires **both** `BASICRUM_DISPOSABLE_MAGENTO=1`
+and `MAGENTO_TEST_CHECKOUT=1`. It assumes Luma, the in-stock Fusion Backpack
+sample product, guest checkout, US/California shipping, Flat Rate shipping,
+and the offline Check / Money order payment method. It creates one test order
+per successful run (and a quote on unsuccessful runs), using synthetic
+`example.test` contact details. Use only on disposable data with outbound mail
+captured locally; the fixture does not delete orders or alter store settings.
+No live payment provider is selected. It verifies actual `Checkout` and
+`Checkout Success` beacons, not a manually substituted browser variable.
+
+Authenticated account/address/order/wishlist and PayPal agreement journeys
+are not included in this public browser matrix. Their exact labels, alongside
+all other mappings, are covered by the focused PHP tests. A missing journey
+fixture is not evidence of end-to-end verification for that page.
+
 ## Required pre-release native gate
 
 The `0.0.2` identity must not be reused for this breaking, previously

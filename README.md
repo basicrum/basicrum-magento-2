@@ -34,16 +34,22 @@ Then enable and initialize the module:
 ```sh
 bin/magento module:enable Basicrum_Analytics
 bin/magento setup:upgrade
+bin/magento setup:di:compile
 bin/magento cache:flush
 ```
 
-In production mode, deploy static content using the store's normal deployment
-process after installing or upgrading the module.
+Regenerate compiled DI after installation or upgrade, including developer
+installations where DI was previously compiled. This applies changed constructor
+metadata and the global CSP collector registration. In production mode, deploy
+static content using the store's normal deployment process as well.
 
 ## Configuration
 
 Open **Stores > Configuration > Basicrum Analytics**. Every setting supports
-Magento default, website, and store inheritance.
+Magento default, website, and store inheritance. Display-only status, version,
+and callback instructions have no inheritance controls or stored values.
+Visitor Consent and Privacy open expanded each time you visit the page. You
+can collapse them while working; they reopen on your next visit.
 
 Required settings:
 
@@ -72,8 +78,13 @@ Collection controls:
   development. Without it, saved and effective HTTP endpoints are upgraded to
   HTTPS.
 
-The runtime emits the existing Magento 2 `p_type` values, `p_gen=mage2`, and
-the configured `brum_site_id`. Boomerang uses `instrument_xhr=false`,
+The runtime emits Magento 1's exact named `p_type` values for equivalent
+Magento 2 pages (for example, `Home`, `Product`, `Search`, and
+`Checkout Success`), while retaining `p_gen=mage2` and the configured
+`brum_site_id`. Unknown actions use `unmapped_<lowercase full action name>`;
+an unavailable action uses `unknown`. The [page-type alignment notes](docs/PAGE-TYPE-ALIGNMENT.md)
+list all mappings, native-route adaptations, and reporting impact.
+Boomerang uses `instrument_xhr=false`,
 Continuity and ResourceTiming with `splitAtPath`, and Secure/SameSite Strict
 cookie settings, matching the reviewed Basicrum configuration.
 
@@ -129,6 +140,12 @@ Automatic consent-provider adapters are not part of Phase 1.
 No data migration renames, deletes, or heuristically rewrites stored settings.
 Review the following before enabling the upgraded module:
 
+- Magento 2 `p_type` labels now match Magento 1, including capitalization and
+  spaces. This intentionally changes existing report groupings; historical
+  beacons are not migrated and no legacy-label mode is provided. Update any
+  report filters and purge cached HTML after upgrading. WordPress and Magento
+  1 labels are unchanged.
+
 - Before the first public release, the technical module identifier and PHP
   namespace were normalized to the “Basicrum” spelling. This is an intentional
   breaking rename; the supported identifiers are `Basicrum_Analytics` and
@@ -177,17 +194,25 @@ npm test
 ```
 
 The PHP harness covers defaults, validation, save normalization, runtime gates,
-scope inheritance, CSP origin policy, page-type response handling, template
+scope inheritance, CSP origin policy, all Magento 1-aligned page-type mappings
+and fallbacks, template
 serialization/loader selection, and artifact provenance. Browser tests execute
 the packaged readable and minified loaders and the real bundled Boomerang
-against intercepted local requests. They cover pre-consent silence, one-time
+against intercepted local requests. Global setup renders the actual PHP footer
+template using PHP 8.3 in Docker (Docker must be running), then the browser
+executes its inline configuration and Wait After Onload plugin. Set
+`BASICRUM_TEST_PHP=/absolute/path/to/php` to use an installed PHP CLI instead.
+Magento block/renderer doubles are used here; native rendering is covered by
+the separate integration suite. The checks cover pre-consent silence, one-time
 loading, denial and withdrawal races, cookie cleanup, query redaction, and
-beacon identity.
+beacon identity, delayed sending, and cancellation of the rendered wait timer.
 
 For the actual layout/template/static-content/CSP/storefront-to-beacon path,
 use the guarded disposable-store harness in `tests/integration/README.md`.
-The regular CI workflow runs strict Composer 2.10 validation plus the fast PHP
-and Chromium checks. Before tagging Phase 1 as `0.1.0`, the documented native
+The regular CI workflow runs strict Composer 2.10 validation and optimized
+production classmap checks plus the fast PHP and Chromium checks. Browser
+retries in CI retain diagnostics, but a flaky pass still fails the job.
+Before tagging Phase 1 as `0.1.0`, the documented native
 release gate is also required: it runs Magento upgrade, DI compilation, static
 deployment, storefront/beacon assertions, and an authenticated Admin rendering
 check. The disposable Magento gate needs a provisioned installation and test
