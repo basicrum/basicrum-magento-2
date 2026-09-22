@@ -1,17 +1,17 @@
 <?php
 declare(strict_types=1);
 
-namespace BasicRum\Analytics\Model;
+namespace Basicrum\Analytics\Model;
 
-use BasicRum\Analytics\Api\PageTypeDetectorInterface;
+use Basicrum\Analytics\Api\PageTypeDetectorInterface;
 use Magento\Framework\App\Request\Http as HttpRequest;
-use Magento\Framework\App\ResponseInterface;
+use Magento\Framework\App\Response\Http as HttpResponse;
 
 class PageTypeDetector implements PageTypeDetectorInterface
 {
     public function __construct(
         private HttpRequest $request,
-        private ResponseInterface $response
+        private HttpResponse $response
     ) {
     }
 
@@ -23,7 +23,7 @@ class PageTypeDetector implements PageTypeDetectorInterface
     public function getPageType(): string
     {
         // Check for error pages first
-        if ($this->response->getStatusCode() == 404) {
+        if ($this->response->getStatusCode() === 404) {
             return '404_not_found';
         }
 

@@ -86,6 +86,70 @@ namespace Magento\Framework\App {
     }
 }
 
+namespace Magento\Framework\App\Request {
+    class Http
+    {
+        public function __construct(private string $fullActionName = '')
+        {
+        }
+
+        public function getFullActionName(): string
+        {
+            return $this->fullActionName;
+        }
+    }
+}
+
+namespace Magento\Framework\App\Response {
+    class Http
+    {
+        public function __construct(private int $statusCode = 200)
+        {
+        }
+
+        public function getStatusCode(): int
+        {
+            return $this->statusCode;
+        }
+    }
+}
+
+namespace Magento\Csp\Api {
+    interface PolicyCollectorInterface
+    {
+        public function collect(array $defaultPolicies = []): array;
+    }
+}
+
+namespace Magento\Csp\Model\Policy {
+    class FetchPolicy
+    {
+        /** @param string[] $hostSources */
+        public function __construct(
+            private string $id,
+            private bool $noneAllowed = true,
+            private array $hostSources = []
+        ) {
+        }
+
+        public function getId(): string
+        {
+            return $this->id;
+        }
+
+        /** @return string[] */
+        public function getHostSources(): array
+        {
+            return $this->hostSources;
+        }
+
+        public function isNoneAllowed(): bool
+        {
+            return $this->noneAllowed;
+        }
+    }
+}
+
 namespace Magento\Framework\App\Cache {
     interface TypeListInterface
     {

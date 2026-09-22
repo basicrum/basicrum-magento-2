@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace BasicRum\Analytics\Model\System\Config\Backend;
+namespace Basicrum\Analytics\Model\System\Config\Backend;
 
-use BasicRum\Analytics\Model\Config;
+use Basicrum\Analytics\Model\Config;
 use Magento\Framework\App\Cache\TypeListInterface;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\App\Config\Value;

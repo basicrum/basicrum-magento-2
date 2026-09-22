@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-use BasicRum\Analytics\ViewModel\Footer;
+use Basicrum\Analytics\ViewModel\Footer;
 use Magento\Framework\View\Element\Template;
 use Magento\Framework\View\Helper\SecureHtmlRenderer;
 
@@ -20,12 +20,12 @@ if ($config === null) {
 
 $jsonFlags = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES;
 $boomerangUrl = $block->getViewFileUrl(
-    'BasicRum_Analytics::js/boomr/boomerang-' . $viewModel->getBoomerangVersion() . '.cutting-edge.min.js'
+    'Basicrum_Analytics::js/boomr/boomerang-' . $viewModel->getBoomerangVersion() . '.cutting-edge.min.js'
 );
 $loaderName = $config['consent_enabled']
     ? 'consent-boomerang-loader-v1-15.min.js'
     : 'boomerang-loader-v15.min.js';
-$loaderUrl = $block->getViewFileUrl('BasicRum_Analytics::js/loaders/' . $loaderName);
+$loaderUrl = $block->getViewFileUrl('Basicrum_Analytics::js/loaders/' . $loaderName);
 
 $boomerangVars = [
     ['addVar', 'p_type', $viewModel->getPageType()],

@@ -2,7 +2,6 @@
     "name": "basicrum/basicrum-analytics",
     "description": "Basicrum real user monitoring for Magento 2",
     "type": "magento2-module",
-    "version": "0.0.2",
     "authors": [
         {
             "name": "Tsvetan Stoychev",
@@ -12,6 +11,9 @@
     "require": {
         "php": ">=8.2 <8.5",
         "magento/framework": "^103.0",
+        "magento/module-backend": "^102.0",
+        "magento/module-config": "^101.2",
+        "magento/module-csp": "^100.4",
         "magento/module-store": "^101.1"
     },
     "archive": {
@@ -30,7 +32,7 @@
             "registration.php"
         ],
         "psr-4": {
-            "BasicRum\\Analytics\\": ""
+            "Basicrum\\Analytics\\": ""
         }
     },
     "license": "MIT"

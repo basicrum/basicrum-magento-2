@@ -1,15 +1,19 @@
 <?php
 declare(strict_types=1);
 
-use BasicRum\Analytics\Api\PageTypeDetectorInterface;
-use BasicRum\Analytics\Block\Adminhtml\System\Config\ConsentMode;
-use BasicRum\Analytics\Model\Config;
-use BasicRum\Analytics\Model\System\Config\Backend\BeaconEndpoint;
-use BasicRum\Analytics\Model\System\Config\Backend\BrumSiteId;
-use BasicRum\Analytics\Model\System\Config\Backend\WaitMilliseconds;
-use BasicRum\Analytics\ViewModel\Footer;
+use Basicrum\Analytics\Api\PageTypeDetectorInterface;
+use Basicrum\Analytics\Block\Adminhtml\System\Config\ConsentMode;
+use Basicrum\Analytics\Model\Config;
+use Basicrum\Analytics\Model\Csp\BeaconPolicyCollector;
+use Basicrum\Analytics\Model\PageTypeDetector;
+use Basicrum\Analytics\Model\System\Config\Backend\BeaconEndpoint;
+use Basicrum\Analytics\Model\System\Config\Backend\BrumSiteId;
+use Basicrum\Analytics\Model\System\Config\Backend\WaitMilliseconds;
+use Basicrum\Analytics\ViewModel\Footer;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\App\Cache\TypeListInterface;
+use Magento\Framework\App\Request\Http as HttpRequest;
+use Magento\Framework\App\Response\Http as HttpResponse;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Model\Context;
 use Magento\Framework\Registry;
@@ -20,6 +24,8 @@ require __DIR__ . '/bootstrap.php';
 require $root . '/Api/PageTypeDetectorInterface.php';
 require $root . '/Block/Adminhtml/System/Config/ConsentMode.php';
 require $root . '/Model/Config.php';
+require $root . '/Model/Csp/BeaconPolicyCollector.php';
+require $root . '/Model/PageTypeDetector.php';
 require $root . '/ViewModel/Footer.php';
 require $root . '/Model/System/Config/Backend/BeaconEndpoint.php';
 require $root . '/Model/System/Config/Backend/BrumSiteId.php';
@@ -27,6 +33,117 @@ require $root . '/Model/System/Config/Backend/WaitMilliseconds.php';
 
 /** @var array<string, Closure> $tests */
 $tests = [];
+
+/**
+ * @return array{status: int, stdout: string, stderr: string}
+ */
+$runDisposableGuard = static function (string $moduleOutput, int $moduleStatus) use ($root): array {
+    $temporaryRoot = sys_get_temp_dir() . '/basicrum-magento-guard-' . bin2hex(random_bytes(6));
+    $temporaryBin = $temporaryRoot . '/bin';
+    basicrum_assert_true(mkdir($temporaryBin, 0700, true), 'create temporary Magento root');
+
+    $fakeMagento = $temporaryBin . '/magento';
+    $fakeMagentoScript = <<<'SH'
+#!/bin/sh
+if [ "$1" = "module:status" ] && [ "$2" = "--enabled" ]; then
+    printf '%s\n' "${BASICRUM_FAKE_MODULE_OUTPUT:-}"
+    exit "${BASICRUM_FAKE_MODULE_STATUS:-0}"
+fi
+echo "configuration mutation: $*" >&2
+exit 73
+SH;
+    basicrum_assert_true(file_put_contents($fakeMagento, $fakeMagentoScript) !== false, 'write fake Magento CLI');
+    basicrum_assert_true(chmod($fakeMagento, 0700), 'make fake Magento CLI executable');
+
+    $pipes = [];
+    try {
+        $process = proc_open(
+            ['/bin/sh', $root . '/tests/integration/configure-disposable.sh'],
+            [
+                1 => ['pipe', 'w'],
+                2 => ['pipe', 'w'],
+            ],
+            $pipes,
+            $root,
+            [
+                'PATH' => (string) getenv('PATH'),
+                'BASICRUM_DISPOSABLE_MAGENTO' => '1',
+                'BASICRUM_FAKE_MODULE_OUTPUT' => $moduleOutput,
+                'BASICRUM_FAKE_MODULE_STATUS' => (string) $moduleStatus,
+                'MAGENTO_ROOT' => $temporaryRoot,
+                'MAGENTO_STOREFRONT_URL' => 'https://magento.test/',
+            ]
+        );
+        basicrum_assert_true(is_resource($process), 'start disposable integration guard');
+        $stdout = stream_get_contents($pipes[1]);
+        $stderr = stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+
+        return [
+            'status' => proc_close($process),
+            'stdout' => $stdout,
+            'stderr' => $stderr,
+        ];
+    } finally {
+        if (isset($pipes[1]) && is_resource($pipes[1])) {
+            fclose($pipes[1]);
+        }
+        if (isset($pipes[2]) && is_resource($pipes[2])) {
+            fclose($pipes[2]);
+        }
+        if (is_file($fakeMagento)) {
+            unlink($fakeMagento);
+        }
+        if (is_dir($temporaryBin)) {
+            rmdir($temporaryBin);
+        }
+        if (is_dir($temporaryRoot)) {
+            rmdir($temporaryRoot);
+        }
+    }
+};
+
+/**
+ * @return array{status: int, stdout: string, stderr: string}
+ */
+$runReleaseGateGuard = static function (string $releaseTag) use ($root): array {
+    $pipes = [];
+    try {
+        $process = proc_open(
+            ['/bin/sh', $root . '/tests/integration/release-gate.sh'],
+            [
+                1 => ['pipe', 'w'],
+                2 => ['pipe', 'w'],
+            ],
+            $pipes,
+            $root,
+            [
+                'PATH' => (string) getenv('PATH'),
+                'BASICRUM_DISPOSABLE_MAGENTO' => '1',
+                'BASICRUM_RELEASE_TAG' => $releaseTag,
+            ]
+        );
+        basicrum_assert_true(is_resource($process), 'start native release gate guard');
+        $stdout = stream_get_contents($pipes[1]);
+        $stderr = stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+
+        return [
+            'status' => proc_close($process),
+            'stdout' => $stdout,
+            'stderr' => $stderr,
+        ];
+    } finally {
+        if (isset($pipes[1]) && is_resource($pipes[1])) {
+            fclose($pipes[1]);
+        }
+        if (isset($pipes[2]) && is_resource($pipes[2])) {
+            fclose($pipes[2]);
+        }
+    }
+};
 
 $tests['fresh-install defaults fail closed and match config.xml'] = function () use ($root): void {
     $defaults = Config::getDefaults();
@@ -44,6 +161,229 @@ $tests['fresh-install defaults fail closed and match config.xml'] = function () 
     basicrum_assert_same('0', (string) $xml->default->basicrum->privacy->strip_query_string, 'query default');
     basicrum_assert_same('0', (string) $xml->default->basicrum->performance->wait_after_onload, 'wait default');
     basicrum_assert_same('0', (string) $xml->default->basicrum->performance->delay_ms, 'delay default');
+};
+
+$tests['technical identity and direct Magento dependencies are declared consistently'] = function () use ($root): void {
+    $composer = json_decode(
+        (string) file_get_contents($root . '/composer.json'),
+        true,
+        512,
+        JSON_THROW_ON_ERROR
+    );
+    basicrum_assert_same('^102.0', $composer['require']['magento/module-backend'], 'Backend dependency');
+    basicrum_assert_same('^101.2', $composer['require']['magento/module-config'], 'Config dependency');
+    basicrum_assert_same('^100.4', $composer['require']['magento/module-csp'], 'CSP dependency');
+    basicrum_assert_same('^101.1', $composer['require']['magento/module-store'], 'Store dependency');
+    basicrum_assert_same(
+        ['Basicrum\\Analytics\\' => ''],
+        $composer['autoload']['psr-4'],
+        'Composer namespace uses the canonical Basicrum spelling'
+    );
+    basicrum_assert_false(
+        array_key_exists('version', $composer),
+        'Composer package version must come from an immutable VCS tag'
+    );
+
+    $module = simplexml_load_file($root . '/etc/module.xml');
+    basicrum_assert_same('Basicrum_Analytics', (string) $module->module['name'], 'Magento module identifier');
+    basicrum_assert_same(
+        ['Magento_Backend', 'Magento_Config', 'Magento_Csp', 'Magento_Store'],
+        array_map(
+            static fn (SimpleXMLElement $dependency): string => (string) $dependency['name'],
+            iterator_to_array($module->module->sequence->module, false)
+        ),
+        'module sequence'
+    );
+    basicrum_assert_contains(
+        "'Basicrum_Analytics'",
+        (string) file_get_contents($root . '/registration.php'),
+        'registration identifier'
+    );
+
+    $acl = simplexml_load_file($root . '/etc/acl.xml');
+    $aclResources = $acl->xpath('//resource[@id="Basicrum_Analytics::basicrum_analytics"]');
+    basicrum_assert_same(1, count($aclResources), 'canonical ACL resource');
+
+    $system = simplexml_load_file($root . '/etc/adminhtml/system.xml');
+    basicrum_assert_same(
+        (string) $aclResources[0]['id'],
+        (string) $system->system->section->resource,
+        'system configuration and ACL resource must match'
+    );
+
+    $di = simplexml_load_file($root . '/etc/di.xml');
+    basicrum_assert_same(
+        'Basicrum\\Analytics\\Api\\PageTypeDetectorInterface',
+        (string) $di->preference['for'],
+        'DI preference interface'
+    );
+    basicrum_assert_same(
+        'Basicrum\\Analytics\\Model\\PageTypeDetector',
+        (string) $di->preference['type'],
+        'DI preference implementation'
+    );
+
+    $frontendDi = simplexml_load_file($root . '/etc/frontend/di.xml');
+    $collector = $frontendDi->xpath('//item[@name="basicrum_beacon"]');
+    basicrum_assert_same(1, count($collector), 'frontend CSP collector declaration');
+    basicrum_assert_same(
+        'Basicrum\\Analytics\\Model\\Csp\\BeaconPolicyCollector',
+        trim((string) $collector[0]),
+        'frontend CSP collector class'
+    );
+
+    $frontendLayout = simplexml_load_file($root . '/view/frontend/layout/default.xml');
+    $footerBlock = $frontendLayout->xpath('//block[@name="basicrum.analytics.footer"]');
+    basicrum_assert_same(1, count($footerBlock), 'footer block declaration');
+    basicrum_assert_same(
+        'Basicrum_Analytics::footer.phtml',
+        (string) $footerBlock[0]['template'],
+        'footer template alias'
+    );
+    $footerViewModel = $frontendLayout->xpath(
+        '//block[@name="basicrum.analytics.footer"]/arguments/argument[@name="view_model"]'
+    );
+    basicrum_assert_same(
+        'Basicrum\\Analytics\\ViewModel\\Footer',
+        trim((string) $footerViewModel[0]),
+        'footer view model'
+    );
+
+    $adminLayout = simplexml_load_file($root . '/view/adminhtml/layout/adminhtml_system_config_edit.xml');
+    basicrum_assert_same(
+        'Basicrum_Analytics::css/basicrum-config.css',
+        (string) $adminLayout->head->css['src'],
+        'Admin stylesheet alias'
+    );
+
+    $logoBlock = (string) file_get_contents($root . '/Block/Adminhtml/System/Config/Logo.php');
+    basicrum_assert_contains(
+        'Basicrum_Analytics::system/config/logo.phtml',
+        $logoBlock,
+        'Admin logo template alias'
+    );
+    basicrum_assert_contains(
+        'Basicrum_Analytics::images/basicrum-log.svg',
+        $logoBlock,
+        'Admin logo asset alias'
+    );
+
+    foreach ([
+        'Model/Csp/BeaconPolicyCollector.php',
+        'etc/frontend/di.xml',
+        'view/adminhtml/layout/adminhtml_system_config_edit.xml',
+        'view/adminhtml/templates/system/config/logo.phtml',
+        'view/adminhtml/web/css/basicrum-config.css',
+        'view/adminhtml/web/images/basicrum-log.svg',
+        'tests/integration/admin.spec.js',
+        'tests/integration/release-gate.sh',
+        'CHANGELOG.md',
+    ] as $packagedFile) {
+        basicrum_assert_true(is_file($root . '/' . $packagedFile), 'required package file ' . $packagedFile);
+    }
+
+    $integrationScript = (string) file_get_contents($root . '/tests/integration/configure-disposable.sh');
+    basicrum_assert_contains(
+        'enabled_modules=$("$magento" module:status --enabled)',
+        $integrationScript,
+        'disposable Magento CLI failure guard'
+    );
+    basicrum_assert_contains(
+        "printf '%s\\n' \"\$enabled_modules\" | grep -Fxq 'Basicrum_Analytics'",
+        $integrationScript,
+        'disposable Magento module-enabled guard'
+    );
+
+    $releaseGate = (string) file_get_contents($root . '/tests/integration/release-gate.sh');
+    foreach ([
+        'setup:upgrade',
+        'setup:di:compile',
+        'setup:static-content:deploy -f en_US',
+        'tests/integration/configure-disposable.sh',
+    ] as $releaseCommand) {
+        basicrum_assert_contains($releaseCommand, $releaseGate, 'native release command ' . $releaseCommand);
+    }
+
+    $allowedBrandSpellings = ['Basicrum', 'basicrum', 'BASICRUM', 'basicRum'];
+    $scanExtensions = ['css', 'js', 'json', 'md', 'php', 'phtml', 'sh', 'txt', 'xml', 'yaml', 'yml'];
+    $excludedDirectories = ['.git', 'node_modules', 'playwright-report', 'test-results', 'vendor'];
+    $directory = new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS);
+    $filter = new RecursiveCallbackFilterIterator(
+        $directory,
+        static function (SplFileInfo $current) use ($excludedDirectories): bool {
+            return !$current->isDir() || !in_array($current->getFilename(), $excludedDirectories, true);
+        }
+    );
+
+    foreach (new RecursiveIteratorIterator($filter) as $file) {
+        if (!$file->isFile() || !in_array(strtolower($file->getExtension()), $scanExtensions, true)) {
+            continue;
+        }
+
+        $content = (string) file_get_contents($file->getPathname());
+        preg_match_all('/basicrum/i', $content, $brandMatches);
+        foreach ($brandMatches[0] as $spelling) {
+            basicrum_assert_true(
+                in_array($spelling, $allowedBrandSpellings, true),
+                'noncanonical Basicrum spelling in ' . substr($file->getPathname(), strlen($root) + 1)
+            );
+        }
+    }
+};
+
+$tests['disposable integration guard rejects disabled modules and CLI failures before mutation'] =
+    function () use ($runDisposableGuard): void {
+        $disabled = $runDisposableGuard("Magento_Store", 0);
+        basicrum_assert_same(1, $disabled['status'], 'disabled module must fail before configuration mutation');
+        basicrum_assert_contains(
+            'Basicrum_Analytics is not registered and enabled',
+            $disabled['stderr'],
+            'actionable disabled-module error'
+        );
+        basicrum_assert_not_contains(
+            'configuration mutation',
+            $disabled['stdout'] . $disabled['stderr'],
+            'disabled module causes no Magento config mutation'
+        );
+
+        $failedStatus = $runDisposableGuard("Basicrum_Analytics", 42);
+        basicrum_assert_same(1, $failedStatus['status'], 'failed module query must fail closed');
+        basicrum_assert_contains(
+            'Unable to read enabled Magento modules',
+            $failedStatus['stderr'],
+            'actionable Magento CLI failure'
+        );
+        basicrum_assert_not_contains(
+            'configuration mutation',
+            $failedStatus['stdout'] . $failedStatus['stderr'],
+            'failed module query causes no Magento config mutation'
+        );
+    };
+
+$tests['disposable integration guard accepts an enabled canonical module'] = function () use ($runDisposableGuard): void {
+    $enabled = $runDisposableGuard("Magento_Store\nBasicrum_Analytics", 0);
+    basicrum_assert_same(73, $enabled['status'], 'enabled module must progress beyond the guard');
+    basicrum_assert_contains(
+        'configuration mutation: config:set basicrum/general/enabled 1',
+        $enabled['stderr'],
+        'positive guard reaches the first intended configuration write'
+    );
+    basicrum_assert_not_contains(
+        'is not registered and enabled',
+        $enabled['stdout'] . $enabled['stderr'],
+        'enabled module is accepted'
+    );
+};
+
+$tests['native release gate requires a new 0.1.0 tag identity'] = function () use ($runReleaseGateGuard): void {
+    $oldTag = $runReleaseGateGuard('0.0.2');
+    basicrum_assert_same(1, $oldTag['status'], 'previous release tag must fail');
+    basicrum_assert_contains('0.0.2 must not be reused', $oldTag['stderr'], 'actionable old-tag error');
+    basicrum_assert_not_contains('MAGENTO_ROOT', $oldTag['stderr'], 'old tag fails before native work');
+
+    $phaseOneTag = $runReleaseGateGuard('0.1.0');
+    basicrum_assert_same(1, $phaseOneTag['status'], 'missing Magento root must still fail closed');
+    basicrum_assert_contains('MAGENTO_ROOT must point', $phaseOneTag['stderr'], '0.1.0 passes the tag guard');
 };
 
 $tests['validators accept only supported endpoint and UUIDv4 values'] = function (): void {
@@ -270,14 +610,23 @@ $tests['effective default website and store scope values are preserved'] = funct
 
 $tests['system fields preserve default website and store inheritance'] = function () use ($root): void {
     $xml = simplexml_load_file($root . '/etc/adminhtml/system.xml');
+    $getField = static function (SimpleXMLElement $config, string $groupId, string $fieldId): SimpleXMLElement {
+        $matches = $config->xpath(sprintf(
+            '/config/system/section[@id="basicrum"]/group[@id="%s"]/field[@id="%s"]',
+            $groupId,
+            $fieldId
+        ));
+        basicrum_assert_same(1, count($matches), $groupId . '/' . $fieldId . ' field');
+        return $matches[0];
+    };
     $fields = [
-        $xml->system->section->group[0]->field[3],
-        $xml->system->section->group[0]->field[4],
-        $xml->system->section->group[1]->field[0],
-        $xml->system->section->group[2]->field[0],
-        $xml->system->section->group[3]->field[0],
-        $xml->system->section->group[3]->field[1],
-        $xml->system->section->group[4]->field[0],
+        $getField($xml, 'general', 'beacon_endpoint'),
+        $getField($xml, 'general', 'brum_site_id'),
+        $getField($xml, 'consent', 'enabled'),
+        $getField($xml, 'privacy', 'strip_query_string'),
+        $getField($xml, 'performance', 'wait_after_onload'),
+        $getField($xml, 'performance', 'delay_ms'),
+        $getField($xml, 'developer', 'development_mode'),
     ];
 
     foreach ($fields as $field) {
@@ -287,13 +636,13 @@ $tests['system fields preserve default website and store inheritance'] = functio
     }
 
     basicrum_assert_same(
-        'BasicRum\\Analytics\\Model\\System\\Config\\Backend\\BeaconEndpoint',
-        (string) $xml->system->section->group[0]->field[3]->backend_model,
+        'Basicrum\\Analytics\\Model\\System\\Config\\Backend\\BeaconEndpoint',
+        (string) $getField($xml, 'general', 'beacon_endpoint')->backend_model,
         'endpoint save validator'
     );
     basicrum_assert_same(
-        'BasicRum\\Analytics\\Model\\System\\Config\\Backend\\BrumSiteId',
-        (string) $xml->system->section->group[0]->field[4]->backend_model,
+        'Basicrum\\Analytics\\Model\\System\\Config\\Backend\\BrumSiteId',
+        (string) $getField($xml, 'general', 'brum_site_id')->backend_model,
         'Site ID save validator'
     );
 };
@@ -350,6 +699,7 @@ $tests['template renders safely and selects consent or immediate loader'] = func
         basicrum_test_key($default, 0, Config::XML_PATH_WAIT_MS) => '500',
     ];
     $consent = $render($base);
+    basicrum_assert_contains('Basicrum_Analytics/js/', $consent, 'canonical static asset module identifier');
     basicrum_assert_contains('consent-boomerang-loader-v1-15.min.js', $consent, 'consent loader');
     basicrum_assert_contains('brum_site_id', $consent, 'Site ID variable');
     basicrum_assert_contains('p_gen', $consent, 'generator variable');
@@ -364,6 +714,73 @@ $tests['template renders safely and selects consent or immediate loader'] = func
     $immediate = $render($base);
     basicrum_assert_contains('boomerang-loader-v15.min.js', $immediate, 'immediate loader');
     basicrum_assert_not_contains('consent-boomerang-loader-v1-15.min.js', $immediate, 'no consent loader');
+};
+
+$tests['page type detector uses the concrete HTTP response without changing public vocabulary'] = function (): void {
+    $notFound = new PageTypeDetector(new HttpRequest('cms_index_index'), new HttpResponse(404));
+    basicrum_assert_same('404_not_found', $notFound->getPageType(), '404 response page type');
+
+    $home = new PageTypeDetector(new HttpRequest('cms_index_index'), new HttpResponse(200));
+    basicrum_assert_same('home', $home->getPageType(), 'known page type');
+    basicrum_assert_true($home->isHomePage(), 'homepage helper remains available');
+    basicrum_assert_false($home->isProductPage(), 'product helper remains accurate');
+    basicrum_assert_false($home->isCheckoutPage(), 'checkout helper remains accurate');
+
+    $unmapped = new PageTypeDetector(new HttpRequest('custom_route_index'), new HttpResponse(200));
+    basicrum_assert_same(
+        'unmapped_custom_route_index',
+        $unmapped->getPageType(),
+        'unmapped page type vocabulary remains compatible'
+    );
+};
+
+$tests['CSP collector follows the effective runtime gate and emits origin-only fetch policies'] = function (): void {
+    $default = ScopeConfigInterface::SCOPE_TYPE_DEFAULT;
+    $existingPolicy = new \Magento\Csp\Model\Policy\FetchPolicy('default-src', false, ["'self'"]);
+
+    $inactiveCollector = new BeaconPolicyCollector(new Config(new BasicrumTestScopeConfig()));
+    basicrum_assert_same(
+        [$existingPolicy],
+        $inactiveCollector->collect([$existingPolicy]),
+        'inactive configuration must not add a CSP origin'
+    );
+
+    $values = [
+        basicrum_test_key($default, 0, Config::XML_PATH_ENABLED) => '1',
+        basicrum_test_key($default, 0, Config::XML_PATH_BEACON_ENDPOINT) =>
+            'http://collector.test:8443/path/to/beacon?token=secret',
+        basicrum_test_key($default, 0, Config::XML_PATH_BRUM_SITE_ID) =>
+            '550e8400-e29b-41d4-a716-446655440000',
+        basicrum_test_key($default, 0, Config::XML_PATH_DEVELOPMENT_MODE) => '0',
+    ];
+    $policies = (new BeaconPolicyCollector(new Config(new BasicrumTestScopeConfig($values))))->collect();
+
+    basicrum_assert_same(2, count($policies), 'collector must add both Boomerang fetch directives');
+    basicrum_assert_same('connect-src', $policies[0]->getId(), 'XHR and sendBeacon directive');
+    basicrum_assert_same('img-src', $policies[1]->getId(), 'image fallback directive');
+    basicrum_assert_same(
+        ['https://collector.test:8443'],
+        $policies[0]->getHostSources(),
+        'runtime HTTPS normalization and origin-only policy'
+    );
+    basicrum_assert_same(
+        ['https://collector.test:8443'],
+        $policies[1]->getHostSources(),
+        'query and path must not enter the image policy'
+    );
+    basicrum_assert_false($policies[0]->isNoneAllowed(), 'collector origin must be usable');
+
+    $values[basicrum_test_key($default, 0, Config::XML_PATH_DEVELOPMENT_MODE)] = '1';
+    $values[basicrum_test_key($default, 0, Config::XML_PATH_BEACON_ENDPOINT)] =
+        'http://127.0.0.1:8080/beacon';
+    $developmentPolicies = (
+        new BeaconPolicyCollector(new Config(new BasicrumTestScopeConfig($values)))
+    )->collect();
+    basicrum_assert_same(
+        ['http://127.0.0.1:8080'],
+        $developmentPolicies[0]->getHostSources(),
+        'explicit development HTTP exception must carry into CSP'
+    );
 };
 
 $tests['reviewed Boomerang artifact and notices are pinned'] = function () use ($root): void {

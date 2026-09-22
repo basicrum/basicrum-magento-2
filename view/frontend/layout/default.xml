@@ -4,11 +4,11 @@
     <body>
         <referenceContainer name="before.body.end">
             <block name="basicrum.analytics.footer"
-                   template="BasicRum_Analytics::footer.phtml"
+                   template="Basicrum_Analytics::footer.phtml"
                    ifconfig="basicrum/general/enabled"
             >
                 <arguments>
-                    <argument name="view_model" xsi:type="object">BasicRum\Analytics\ViewModel\Footer</argument>
+                    <argument name="view_model" xsi:type="object">Basicrum\Analytics\ViewModel\Footer</argument>
                 </arguments>
             </block>
         </referenceContainer>

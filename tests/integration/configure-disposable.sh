@@ -21,7 +21,17 @@ cd "$module_root"
 
 magento="${MAGENTO_ROOT}/bin/magento"
 
-"$magento" module:status BasicRum_Analytics
+if ! enabled_modules=$("$magento" module:status --enabled); then
+    echo "Unable to read enabled Magento modules from ${MAGENTO_ROOT}." >&2
+    exit 1
+fi
+
+if ! printf '%s\n' "$enabled_modules" | grep -Fxq 'Basicrum_Analytics'; then
+    echo "Basicrum_Analytics is not registered and enabled in ${MAGENTO_ROOT}." >&2
+    echo "Install this checkout at app/code/Basicrum/Analytics with exact casing and run setup:upgrade." >&2
+    exit 1
+fi
+
 "$magento" config:set basicrum/general/enabled 1
 "$magento" config:set basicrum/general/beacon_endpoint https://collector.basicrum.test/beacon
 "$magento" config:set basicrum/general/brum_site_id 550e8400-e29b-41d4-a716-446655440000

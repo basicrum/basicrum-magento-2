@@ -9,14 +9,14 @@
                  showInDefault="1" showInWebsite="1" showInStore="1">
             <label>Basicrum Analytics</label>
             <tab>basicrum</tab>
-            <resource>BasicRum_Analytics::basicrum_analytics</resource>
+            <resource>Basicrum_Analytics::basicrum_analytics</resource>
             <group id="general" translate="label comment" type="text" sortOrder="10"
                    showInDefault="1" showInWebsite="1" showInStore="1">
                 <label>General Settings</label>
                 <comment>Basicrum emits no storefront monitoring scripts unless it is enabled and the effective Beacon Endpoint and Brum Site ID are valid.</comment>
                 <field id="logo" translate="label" type="text" sortOrder="0"
                        showInDefault="1" showInWebsite="1" showInStore="1">
-                    <frontend_model>BasicRum\Analytics\Block\Adminhtml\System\Config\Logo</frontend_model>
+                    <frontend_model>Basicrum\Analytics\Block\Adminhtml\System\Config\Logo</frontend_model>
                     <label>Basicrum Logo</label>
                     <comment>This field displays the Basicrum logo.</comment>
                 </field>
@@ -29,24 +29,24 @@
                 <field id="monitoring_status" translate="label" type="note" sortOrder="15"
                        showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Monitoring Status</label>
-                    <frontend_model>BasicRum\Analytics\Block\Adminhtml\System\Config\Status</frontend_model>
+                    <frontend_model>Basicrum\Analytics\Block\Adminhtml\System\Config\Status</frontend_model>
                 </field>
                 <field id="beacon_endpoint" translate="label comment" type="text" sortOrder="20"
                        showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Beacon Endpoint</label>
-                    <backend_model>BasicRum\Analytics\Model\System\Config\Backend\BeaconEndpoint</backend_model>
-                    <comment>Valid HTTP or HTTPS collector URL without embedded credentials or a fragment. Endpoint query strings remain supported. Required when Basicrum is enabled. HTTP is upgraded to HTTPS unless the explicit development exception is enabled.</comment>
+                    <backend_model>Basicrum\Analytics\Model\System\Config\Backend\BeaconEndpoint</backend_model>
+                    <comment>Valid HTTP or HTTPS collector URL without embedded credentials or a fragment. Endpoint query strings remain supported. Required when Basicrum is enabled. HTTP is upgraded to HTTPS unless the explicit development exception is enabled. The effective collector origin is added to storefront connect-src and img-src CSP policies while monitoring is active.</comment>
                 </field>
                 <field id="brum_site_id" translate="label comment" type="text" sortOrder="30"
                        showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Brum Site ID</label>
-                    <backend_model>BasicRum\Analytics\Model\System\Config\Backend\BrumSiteId</backend_model>
+                    <backend_model>Basicrum\Analytics\Model\System\Config\Backend\BrumSiteId</backend_model>
                     <comment>UUIDv4 copied from the Basicrum backoffice. Required when Basicrum is enabled.</comment>
                 </field>
                 <field id="boomerang_version" translate="label" type="text" sortOrder="40"
                        showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Boomerang Version</label>
-                    <frontend_model>BasicRum\Analytics\Block\Adminhtml\System\Config\BoomerangVersion</frontend_model>
+                    <frontend_model>Basicrum\Analytics\Block\Adminhtml\System\Config\BoomerangVersion</frontend_model>
                 </field>
             </group>
             <group id="consent" translate="label comment" type="text" sortOrder="20"
@@ -62,7 +62,7 @@
                 <field id="mode" translate="label comment" type="select" sortOrder="20"
                        showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Consent Tool Connection</label>
-                    <source_model>BasicRum\Analytics\Block\Adminhtml\System\Config\ConsentMode</source_model>
+                    <source_model>Basicrum\Analytics\Block\Adminhtml\System\Config\ConsentMode</source_model>
                     <comment>Phase 1 supports manual callbacks. The currently effective legacy value remains visible for compatibility, but other legacy modes cannot be newly selected and none implies an allow decision.</comment>
                     <depends>
                         <field id="enabled">1</field>
@@ -102,7 +102,7 @@
                        showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Delay (milliseconds)</label>
                     <validate>validate-number validate-zero-or-greater</validate>
-                    <backend_model>BasicRum\Analytics\Model\System\Config\Backend\WaitMilliseconds</backend_model>
+                    <backend_model>Basicrum\Analytics\Model\System\Config\Backend\WaitMilliseconds</backend_model>
                     <comment>Zero disables the delay. Values are bounded to 30000 milliseconds (30 seconds).</comment>
                     <depends>
                         <field id="wait_after_onload">1</field>

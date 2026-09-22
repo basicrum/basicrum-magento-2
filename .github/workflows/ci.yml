@@ -9,6 +9,16 @@ permissions:
   contents: read
 
 jobs:
+  composer:
+    name: Composer 2.10 strict validation
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Validate Composer metadata strictly
+        run: docker run --rm -v "$GITHUB_WORKSPACE:/app" -w /app composer:2.10 validate --strict --no-check-publish
+
   php:
     name: PHP ${{ matrix.php }} validation
     runs-on: ubuntu-24.04
@@ -30,7 +40,7 @@ jobs:
       - name: Run focused PHP checks
         run: php tests/php/run.php
 
-      - name: Validate Composer metadata
+      - name: Validate declared PHP constraint
         run: php -r '$data=json_decode(file_get_contents("composer.json"), true, 512, JSON_THROW_ON_ERROR); if (($data["require"]["php"] ?? "") !== ">=8.2 <8.5") { exit(1); }'
 
   browser:

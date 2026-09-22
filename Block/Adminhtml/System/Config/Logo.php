@@ -1,32 +1,27 @@
 <?php
 declare(strict_types=1);
 
-namespace BasicRum\Analytics\Block\Adminhtml\System\Config;
+namespace Basicrum\Analytics\Block\Adminhtml\System\Config;
 
 use Magento\Config\Block\System\Config\Form\Field;
-use Magento\Backend\Block\Template\Context;
 use Magento\Framework\Data\Form\Element\AbstractElement;
 
 class Logo extends Field
 {
-    public function __construct(
-        Context $context,
-        array $data = []
-    ) {
-        parent::__construct($context, $data);
-    }
+    protected $_template = 'Basicrum_Analytics::system/config/logo.phtml';
 
-    public function render(AbstractElement $element)
+    public function render(AbstractElement $element): string
     {
-        $html = '<div style="margin: 20px 0; text-align: center; font-size: 3rem;">';
-        $html .= '<img src="' . $this->getViewFileUrl('BasicRum_Analytics::images/basicrum-log.svg') . '" alt="Basicrum Logo" style="width: 35px; height: 35px;" />';
-        $html .= 'Basicrum Analytics';
-        $html .= '</div>';
-        return $html;
+        return $this->_toHtml();
     }
 
-    protected function _getElementHtml(AbstractElement $element)
+    protected function _getElementHtml(AbstractElement $element): string
     {
         return $this->render($element);
+    }
+
+    public function getLogoUrl(): string
+    {
+        return $this->getViewFileUrl('Basicrum_Analytics::images/basicrum-log.svg');
     }
 }

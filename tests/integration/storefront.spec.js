@@ -24,7 +24,7 @@ test("rendered Magento storefront stays silent until allow and sends the expecte
 
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("request", (request) => {
-    if (request.url().includes("BasicRum_Analytics/js/boomr/boomerang-")) {
+    if (request.url().includes("Basicrum_Analytics/js/boomr/boomerang-")) {
       boomerangRequests += 1;
     }
   });

@@ -16,9 +16,23 @@ PHP 8.3 combination is declared for disposable Magento integration testing.
 
 ## Installation
 
+Install a published package with Composer:
+
 ```sh
 composer require basicrum/basicrum-analytics
-bin/magento module:enable BasicRum_Analytics
+```
+
+For a manual source installation, place this module at the exact path below.
+The casing is required on case-sensitive filesystems:
+
+```text
+app/code/Basicrum/Analytics
+```
+
+Then enable and initialize the module:
+
+```sh
+bin/magento module:enable Basicrum_Analytics
 bin/magento setup:upgrade
 bin/magento cache:flush
 ```
@@ -62,6 +76,13 @@ The runtime emits the existing Magento 2 `p_type` values, `p_gen=mage2`, and
 the configured `brum_site_id`. Boomerang uses `instrument_xhr=false`,
 Continuity and ResourceTiming with `splitAtPath`, and Secure/SameSite Strict
 cookie settings, matching the reviewed Basicrum configuration.
+
+When the effective runtime configuration is active, the module adds only the
+normalized Beacon Endpoint origin (scheme, host, and optional port) to the
+storefront `connect-src` and `img-src` CSP policies. Paths and query strings
+are not copied into CSP. Inactive or invalid configuration adds no collector
+origin. This covers Boomerang's send-beacon/XHR and image-fallback transports;
+it does not weaken other directives or add a wildcard.
 
 ## Consent integration
 
@@ -108,6 +129,12 @@ Automatic consent-provider adapters are not part of Phase 1.
 No data migration renames, deletes, or heuristically rewrites stored settings.
 Review the following before enabling the upgraded module:
 
+- Before the first public release, the technical module identifier and PHP
+  namespace were normalized to the “Basicrum” spelling. This is an intentional
+  breaking rename; the supported identifiers are `Basicrum_Analytics` and
+  `Basicrum\\Analytics`. Lowercase `basicrum/*` configuration paths are
+  unchanged. The exact manual installation path is documented above.
+
 - Existing `basicrum/general/beacon_endpoint` values remain in place but now
   receive save-time and runtime validation. Invalid values make monitoring
   inactive. HTTP becomes HTTPS unless the development exception is explicit.
@@ -133,8 +160,9 @@ new static assets and invalidate any CDN or optimizer cache that can retain old
 HTML or JavaScript. Magento's versioned static asset URLs provide browser cache
 invalidation only after the deployment/content version changes.
 
-The template uses Magento's `SecureHtmlRenderer`, and the loader and Boomerang
-assets are same-origin module assets. The disposable-store check exercises the
+The template uses Magento's `SecureHtmlRenderer`, the loader and Boomerang
+assets are same-origin module assets, and the validated collector origin is
+added dynamically to storefront CSP. The disposable-store check exercises the
 actual layout and CSP path, but Phase 1 does not claim compatibility with a
 broad set of third-party script delay/combine/optimizer extensions.
 
@@ -149,17 +177,21 @@ npm test
 ```
 
 The PHP harness covers defaults, validation, save normalization, runtime gates,
-scope inheritance, template serialization/loader selection, and artifact
-provenance. Browser tests execute the packaged readable and minified loaders
-and the real bundled Boomerang against intercepted local requests. They cover
-pre-consent silence, one-time loading, denial and withdrawal races, cookie
-cleanup, query redaction, and beacon identity.
+scope inheritance, CSP origin policy, page-type response handling, template
+serialization/loader selection, and artifact provenance. Browser tests execute
+the packaged readable and minified loaders and the real bundled Boomerang
+against intercepted local requests. They cover pre-consent silence, one-time
+loading, denial and withdrawal races, cookie cleanup, query redaction, and
+beacon identity.
 
 For the actual layout/template/static-content/CSP/storefront-to-beacon path,
 use the guarded disposable-store harness in `tests/integration/README.md`.
-The regular CI workflow runs the fast PHP and Chromium checks. The disposable
-Magento check needs a licensed/authenticated Magento installation and is not
-reported as passing unless it is run separately.
+The regular CI workflow runs strict Composer 2.10 validation plus the fast PHP
+and Chromium checks. Before tagging Phase 1 as `0.1.0`, the documented native
+release gate is also required: it runs Magento upgrade, DI compilation, static
+deployment, storefront/beacon assertions, and an authenticated Admin rendering
+check. The disposable Magento gate needs a provisioned installation and test
+Admin account and is not reported as passing unless it is run separately.
 
 ## Privacy and lifecycle notes
 

@@ -2,7 +2,7 @@ const { defineConfig } = require("@playwright/test");
 
 module.exports = defineConfig({
   testDir: "./tests/integration",
-  testMatch: "storefront.spec.js",
+  testMatch: "*.spec.js",
   timeout: 30000,
   fullyParallel: false,
   forbidOnly: true,

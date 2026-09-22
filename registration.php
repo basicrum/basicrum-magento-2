@@ -4,6 +4,6 @@ use Magento\Framework\Component\ComponentRegistrar;
 
 ComponentRegistrar::register(
     ComponentRegistrar::MODULE,
-    'BasicRum_Analytics',
+    'Basicrum_Analytics',
     __DIR__
 );

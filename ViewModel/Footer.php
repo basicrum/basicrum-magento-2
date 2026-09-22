@@ -1,9 +1,9 @@
 <?php declare(strict_types=1);
 
-namespace BasicRum\Analytics\ViewModel;
+namespace Basicrum\Analytics\ViewModel;
 
-use BasicRum\Analytics\Api\PageTypeDetectorInterface;
-use BasicRum\Analytics\Model\Config;
+use Basicrum\Analytics\Api\PageTypeDetectorInterface;
+use Basicrum\Analytics\Model\Config;
 use Magento\Framework\View\Element\Block\ArgumentInterface;
 
 class Footer implements ArgumentInterface

@@ -21,15 +21,18 @@ unchanged.
   callback contract. Automatic Magento consent-provider adapters remain later
   work.
 - **R-007 (foundation only):** retained `SecureHtmlRenderer`, used Magento
-  static asset URLs, documented cache/static-deployment behavior, and added a
-  disposable-store check for the real layout/CSP path. A broad optimizer and
-  full-page-cache compatibility matrix remains later work.
+  static asset URLs, added the validated effective Beacon Endpoint origin to
+  storefront `connect-src` and `img-src`, documented cache/static-deployment
+  behavior, and added a disposable-store check for the real layout/CSP path. A
+  broad optimizer and full-page-cache compatibility matrix remains later work.
 - **R-008:** added focused PHP/template tests, real-artifact browser tests with
   intercepted beacons, and a guarded disposable Magento storefront-to-beacon
-  harness.
-- **R-009 (Phase 1 foundation):** added CI for PHP and browser checks plus
-  Boomerang provenance/checksum verification. Installable package build/smoke
-  and publishing remain later work.
+  harness. The native pre-release gate additionally requires Magento upgrade,
+  DI compilation, static deployment, and authenticated Admin rendering.
+- **R-009 (Phase 1 foundation):** added CI for strict Composer 2.10, PHP, and
+  browser checks plus Boomerang provenance/checksum verification. The guarded
+  native Magento check is required separately before the new `0.1.0` tag.
+  Installable package build/smoke and publishing remain later work.
 - **R-010 (Phase 1 documentation):** aligned new customer copy to Basicrum and
   Brum Site ID, reconciled runtime requirements, and documented privacy,
   consent, cache, lifecycle, upgrade, and verification behavior.
@@ -46,26 +49,48 @@ credentials and fragments now fail validation. The unstored hardcoded
 five-second wait becomes explicit off/zero settings; administrators can opt
 back into 5000 ms.
 
+Before the first public release, the technical module identifier and PHP
+namespace were intentionally normalized to the “Basicrum” spelling. This is a
+breaking identifier change, accepted because there are no extension
+installations to migrate. Lowercase `basicrum/*` configuration paths remain
+unchanged. The existing `0.0.2` tag is not reused: the guarded Phase 1 release
+candidate is `0.1.0`, and Composer derives the package version from that future
+immutable VCS tag.
+
+## Selective follow-up from upstream PR #13
+
+Five compatible ideas were adapted without replacing the WordPress-derived
+Phase 1 behavior: a dynamic storefront CSP collector; explicit Config,
+Backend, CSP, and Store module dependencies; the concrete Magento HTTP
+response type for page detection; template/CSS-based Admin logo rendering and
+centralized Boomerang version display; and an unreleased-first changelog.
+Consent removal, a token setting, asset renaming, page-vocabulary/interface
+changes, narrower runtime constraints, and license assertions from that pull
+request were not borrowed.
+
 ## Deferred boundaries
 
 D-001 page vocabulary, D-002 staff exclusion, D-003 placement/readiness queues,
 and D-004 cross-plugin wording remain unchanged. Automatic provider adapters,
 a broad optimizer matrix, package/release publishing, and module-level license
-text approval are not completed by Phase 1. The post-implementation CSP and
-full-page-cache findings recorded in `DEFERRED-CODE-REVIEW-FINDINGS.md` are also
-explicitly deferred.
+text approval are not completed by Phase 1. The full-page-cache finding
+CR-D-002 recorded in `DEFERRED-CODE-REVIEW-FINDINGS.md` remains explicitly
+deferred; CR-D-001's dynamic storefront CSP policy is implemented.
 
 ## Verification recorded at completion
 
-- Focused PHP harness on PHP 8.2, 8.3, and 8.4: 9 groups passed on each version.
+- Focused PHP harness on PHP 8.2, 8.3, and 8.4: 15 groups passed on each version.
 - PHP syntax checks: all module and test PHP/PHTML files passed on PHP 8.2, 8.3, and 8.4.
 - XML well-formedness: module, admin, and layout XML passed.
 - Loader minification/provenance checks: passed.
 - Chromium browser suite: 28 tests passed against readable/minified loaders
   and the real reviewed Boomerang artifact with intercepted local beacons.
-- Composer 2.10 validation: valid with the pre-existing recommendation to omit
-  the explicit package `version` field.
+- Composer 2.10 strict validation (`--strict --no-check-publish`): valid;
+  release versions are derived from VCS tags rather than an explicit package
+  `version` field.
 
 No disposable Magento 2 installation was available in the workspace, so the
-native storefront harness was added but not run. Remote GitHub Actions were
-also not run from this local implementation.
+native storefront/Admin release gate was added but not run. Its setup upgrade,
+DI compilation, static deployment, cached storefront, intercepted beacon, and
+authenticated Admin assertions therefore remain unverified here. Remote GitHub
+Actions were also not run from this local implementation.

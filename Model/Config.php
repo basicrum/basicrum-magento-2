@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace BasicRum\Analytics\Model;
+namespace Basicrum\Analytics\Model;
 
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Store\Model\ScopeInterface;

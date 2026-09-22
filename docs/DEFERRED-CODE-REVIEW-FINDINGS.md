@@ -1,23 +1,25 @@
 # Deferred code-review findings
 
 These findings were raised independently by the Grok and Fable 5.1 reviews of
-the Phase 1 implementation. They are intentionally deferred from the current
-change and must remain visible for follow-up planning.
+the Phase 1 implementation. CR-D-001 was subsequently implemented by adapting
+the compatible CSP work from upstream PR #13. CR-D-002 remains intentionally
+deferred and visible for follow-up planning.
 
 ## CR-D-001: Dynamic Magento CSP policy for the Beacon Endpoint
 
-**Status:** Deferred.
+**Status:** Implemented.
 
-The storefront passes the configured Beacon Endpoint to Boomerang, but the
-module does not currently add that store-scoped origin to Magento CSP
-`connect-src` or `img-src` policy. Restrictive CSP pages, especially checkout
-and payment flows, may therefore block beacon delivery.
+The storefront CSP collector now consumes the same validated effective runtime
+configuration as rendering. While monitoring is active, it adds only the
+normalized endpoint origin to `connect-src` and `img-src`, covering
+send-beacon/XHR and image fallbacks without wildcards. Disabled, incomplete,
+or invalid configuration adds nothing. The collector is registered in
+frontend-only dependency injection so it does not broaden Admin CSP.
 
-Follow-up must determine the supported Magento CSP API across the declared
-framework range, add the effective endpoint origin without broad wildcards,
-cover both send-beacon/XHR and image fallbacks, and verify the result on the
-disposable Magento baseline. The existing same-origin loader and
-`SecureHtmlRenderer` handling do not resolve this collector-origin policy.
+Focused tests cover the inactive gate, production HTTPS normalization,
+path/query exclusion, port retention, both directives, and the explicit
+development HTTP exception. Native verification on the disposable Magento
+baseline is still required and is not claimed by this implementation.
 
 ## CR-D-002: Full-page-cache invalidation after Basicrum configuration changes
 

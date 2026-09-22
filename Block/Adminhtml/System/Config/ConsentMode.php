@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace BasicRum\Analytics\Block\Adminhtml\System\Config;
+namespace Basicrum\Analytics\Block\Adminhtml\System\Config;
 
-use BasicRum\Analytics\Model\Config;
+use Basicrum\Analytics\Model\Config;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\Data\OptionSourceInterface;
