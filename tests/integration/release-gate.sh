@@ -35,9 +35,11 @@ module_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 magento="${MAGENTO_ROOT}/bin/magento"
 
 cd "$MAGENTO_ROOT"
+php "$module_root/tests/integration/check-baseline.php"
 "$magento" setup:upgrade
 "$magento" setup:di:compile
 "$magento" setup:static-content:deploy -f en_US
+php "$module_root/tests/integration/config-save.php"
 
 cd "$module_root"
 BASICRUM_DEPLOY_STATIC=0 tests/integration/configure-disposable.sh

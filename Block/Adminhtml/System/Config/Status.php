@@ -37,18 +37,12 @@ class Status extends ReadOnlyField
             'active_immediate' => __('Ready, immediate: Boomerang loads without waiting for a consent decision and may set cookies and send performance data.'),
         ];
 
-        $message = $messages[$status['state']] ?? __('Inactive: review the effective Basicrum configuration.');
-        $legacyNotice = '';
-        if (in_array($status['consent_mode'], Config::LEGACY_CONSENT_MODES, true)) {
-            $legacyNotice = ' ' . __(
-                'The saved legacy consent mode is retained for compatibility, is treated as manual callbacks, and never counts as consent.'
-            );
-        }
+        $message = $messages[$status] ?? __('Inactive: review the effective Basicrum configuration.');
 
         return sprintf(
             '<div class="message message-%s"><div>%s</div></div>',
-            str_starts_with($status['state'], 'active_') ? 'success' : 'warning',
-            $this->escapeHtml((string) $message . (string) $legacyNotice)
+            str_starts_with($status, 'active_') ? 'success' : 'warning',
+            $this->escapeHtml((string) $message)
         );
     }
 

@@ -60,15 +60,6 @@
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
                     <comment>Yes keeps Boomerang unloaded until an allow callback on each page. No starts monitoring immediately; choose No only when deliberate and permitted.</comment>
                 </field>
-                <field id="mode" translate="label comment" type="select" sortOrder="20"
-                       showInDefault="1" showInWebsite="1" showInStore="1">
-                    <label>Consent Tool Connection</label>
-                    <source_model>Basicrum\Analytics\Block\Adminhtml\System\Config\ConsentMode</source_model>
-                    <comment>Phase 1 supports manual callbacks. The currently effective legacy value remains visible for compatibility, but other legacy modes cannot be newly selected and none implies an allow decision.</comment>
-                    <depends>
-                        <field id="enabled">1</field>
-                    </depends>
-                </field>
                 <field id="integration_help" translate="label" type="note" sortOrder="30"
                        showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Manual Callback API</label>

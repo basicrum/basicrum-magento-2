@@ -161,11 +161,11 @@ Review the following before enabling the upgraded module:
 - Existing `basicrum/consent/enabled=0` means deliberate immediate loading.
   Value `1` means consent-controlled loading. Invalid or absent effective
   values fail to consent-controlled behavior.
-- Legacy `basicrum/consent/mode` values (`explicit`, `implicit`, `cookie`, and
-  `gdpr`) are retained. Only the currently effective legacy value is shown in
-  Admin alongside Manual callbacks, so historical configuration is preserved
-  without offering other legacy modes for new selection. All legacy values are
-  manual-integration metadata and none counts as an allow decision.
+- The obsolete `basicrum/consent/mode` selector and runtime handling are
+  removed. Existing database rows are left untouched but ignored, including
+  `manual`, `explicit`, `implicit`, `cookie`, and `gdpr`. Only the consent-required
+  switch controls loading; none of these old strings counts as consent. Manual
+  callbacks remain the supported integration.
 - The old five-second wait was hardcoded and had no stored setting. It is
   replaced with `basicrum/performance/wait_after_onload` and `delay_ms`, both
   defaulting to off/zero. Administrators who need the former timing must
@@ -193,8 +193,8 @@ npm ci
 npm test
 ```
 
-The PHP harness covers defaults, validation, save normalization, runtime gates,
-scope inheritance, CSP origin policy, all Magento 1-aligned page-type mappings
+The fast PHP harness uses test doubles to cover defaults, validation, save
+normalization, runtime gates, scope inheritance, CSP origin policy, all Magento 1-aligned page-type mappings
 and fallbacks, template
 serialization/loader selection, and artifact provenance. Browser tests execute
 the packaged readable and minified loaders and the real bundled Boomerang
@@ -209,13 +209,19 @@ beacon identity, delayed sending, and cancellation of the rendered wait timer.
 
 For the actual layout/template/static-content/CSP/storefront-to-beacon path,
 use the guarded disposable-store harness in `tests/integration/README.md`.
+It also exercises Magento's real Admin configuration-save model, backend
+validation, and default/website/store inheritance inside rolled-back database
+transactions. Browser traffic is limited to the disposable storefront/Admin;
+the expected beacon is fulfilled locally and unexpected destinations fail the
+test. External payment scripts must be disabled in that test installation.
 The regular CI workflow runs strict Composer 2.10 validation and optimized
 production classmap checks plus the fast PHP and Chromium checks. Browser
 retries in CI retain diagnostics, but a flaky pass still fails the job.
 Before tagging Phase 1 as `0.1.0`, the documented native
-release gate is also required: it runs Magento upgrade, DI compilation, static
-deployment, storefront/beacon assertions, and an authenticated Admin rendering
-check. The disposable Magento gate needs a provisioned installation and test
+release gate is also required: it first enforces all versions in `baseline.env`,
+then runs Magento upgrade, DI compilation, static deployment, native save tests,
+storefront/beacon assertions, and an authenticated Admin rendering check.
+The disposable Magento gate needs a provisioned installation and test
 Admin account and is not reported as passing unless it is run separately.
 
 ## Privacy and lifecycle notes

@@ -1,5 +1,5 @@
-const { test, expect } = require("@playwright/test");
-const { interceptBeacons, requestParameters, siteId } = require("./beacons");
+const { test, expect } = require("./fixtures");
+const { requestParameters, siteId } = require("./beacons");
 
 const storefrontUrl = process.env.MAGENTO_STOREFRONT_URL;
 test.skip(!storefrontUrl, "MAGENTO_STOREFRONT_URL is required");
@@ -24,9 +24,9 @@ const pages = [
 ];
 
 function pageTypeTest(path, label, needsSampleData = false) {
-  test(`${path || "/"} emits ${label}`, async ({ page }) => {
+  test(`${path || "/"} emits ${label}`, async ({ page, beaconTraffic }) => {
     test.skip(needsSampleData && process.env.MAGENTO_SAMPLE_DATA !== "1", "Magento Luma sample data is required");
-    const beacons = await interceptBeacons(page);
+    const { beacons } = beaconTraffic;
     await page.goto(new URL(path, storefrontUrl).toString(), { waitUntil: "domcontentloaded" });
     await page.waitForFunction(() => typeof window.OPT_IN_BASICRUM_LOADER_WRAPPER === "function");
     expect(beacons).toHaveLength(0);

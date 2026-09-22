@@ -15,6 +15,8 @@ Notable changes to the Basicrum Analytics module are recorded here.
   foundations.
 - A guarded native-Magento `0.1.0` release gate covering upgrade, DI
   compilation, static deployment, storefront beacons, and Admin rendering.
+- Native configuration-save tests covering validation, same-form HTTP policy,
+  scoped inheritance, and invalid imported values, with transaction rollback.
 - A frontend-only dynamic CSP collector that adds the validated effective
   Beacon Endpoint origin to `connect-src` and `img-src` only while monitoring
   is active.
@@ -49,9 +51,20 @@ Notable changes to the Basicrum Analytics module are recorded here.
   Magento 1-aligned label comparisons.
 - Admin logo markup and styles live in a template and namespaced stylesheet;
   the displayed Boomerang version uses the module's central version constant.
+- Removed the obsolete consent-mode selector and compatibility handling. The
+  consent-required switch and public manual callbacks remain unchanged; any old
+  database rows are ignored, not deleted.
+- Admin status and runtime eligibility share one decision. XML owns install
+  defaults; unused duplicate defaults and the stored Boomerang-version default
+  are removed. Tests focus on behavior instead of broad branding/source scans.
 
 ### Fixed
 
+- Browser integration checks now intercept at context scope and restrict
+  transport to the disposable store, including redirects. Unexpected traffic
+  fails the test; collectors are never added to the proxy allowlist.
+- The release gate checks installed Magento, PHP, Composer, MariaDB, and
+  OpenSearch against `baseline.env` before running upgrade or configuration writes.
 - Exclude test doubles from Composer's production classmap; CI now checks strict
   optimized autoload generation and verifies that no test classes leak into it.
 - Remove inheritance controls and scope labels from display-only Admin status,
@@ -71,8 +84,8 @@ Notable changes to the Basicrum Analytics module are recorded here.
 
 ### Compatibility and deferred work
 
-- Existing configuration paths and stored legacy consent-mode values are
-  preserved; legacy values do not grant consent.
+- Active configuration paths are preserved. Stored legacy consent-mode values
+  are left untouched but no longer read; legacy values do not grant consent.
 - There is no configuration data migration. Existing enabled stores remain
   inactive until the new required Brum Site ID is valid.
 - Automatic consent-provider adapters, full-page-cache invalidation analysis,

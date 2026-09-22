@@ -1,4 +1,4 @@
-const { test, expect } = require("@playwright/test");
+const { test, expect } = require("./fixtures");
 const { expectAdminCsp } = require("./csp");
 
 const adminUrl = process.env.MAGENTO_ADMIN_URL;
@@ -55,6 +55,7 @@ test("Basicrum configuration renders in Magento Admin", async ({ page }) => {
   await expect(page.getByText("Monitoring Status", { exact: true })).toBeVisible();
   await expect(page.getByText("Beacon Endpoint", { exact: true })).toBeVisible();
   await expect(page.getByText("Brum Site ID", { exact: true })).toBeVisible();
+  await expect(page.locator("#basicrum_consent_mode")).toHaveCount(0);
 
   const displayRows = [
     "basicrum_general_monitoring_status",

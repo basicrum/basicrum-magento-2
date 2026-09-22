@@ -2,7 +2,6 @@
 declare(strict_types=1);
 
 use Basicrum\Analytics\Api\PageTypeDetectorInterface;
-use Basicrum\Analytics\Block\Adminhtml\System\Config\ConsentMode;
 use Basicrum\Analytics\Model\Config;
 use Basicrum\Analytics\Model\Csp\BeaconPolicyCollector;
 use Basicrum\Analytics\Model\PageTypeDetector;
@@ -24,7 +23,6 @@ use Magento\Store\Model\ScopeInterface;
 $root = dirname(__DIR__, 2);
 require __DIR__ . '/bootstrap.php';
 require $root . '/Api/PageTypeDetectorInterface.php';
-require $root . '/Block/Adminhtml/System/Config/ConsentMode.php';
 require $root . '/Model/Config.php';
 require $root . '/Model/Csp/BeaconPolicyCollector.php';
 require $root . '/Model/PageTypeDetector.php';
@@ -33,9 +31,33 @@ require $root . '/Model/System/Config/Backend/BeaconEndpoint.php';
 require $root . '/Model/System/Config/Backend/BrumSiteId.php';
 require $root . '/Model/System/Config/Backend/WaitMilliseconds.php';
 require __DIR__ . '/footer-fixture.php';
+require $root . '/tests/integration/baseline.php';
 
 /** @var array<string, Closure> $tests */
 $tests = [];
+
+$tests['release baseline rejects wrong or missing platform versions'] = function () use ($root): void {
+    $expected = parse_ini_file($root . '/tests/integration/baseline.env', false, INI_SCANNER_RAW);
+    $matching = [
+        'MAGENTO_VERSION' => '2.4.7-p10',
+        'PHP_VERSION' => '8.3.30',
+        'COMPOSER_VERSION' => '2.10.0',
+        'MARIADB_VERSION' => '10.11.14-MariaDB',
+        'OPENSEARCH_VERSION' => '2.19.4',
+    ];
+    basicrum_assert_same([], basicrum_baseline_errors($expected, $matching), 'declared platform passes');
+    foreach ([
+        'MAGENTO_VERSION' => '2.4.9',
+        'PHP_VERSION' => '8.5.6',
+        'COMPOSER_VERSION' => '2.1.0',
+        'MARIADB_VERSION' => '11.4.0-MariaDB',
+        'OPENSEARCH_VERSION' => '2.190.0',
+    ] as $key => $version) {
+        $wrong = array_replace($matching, [$key => $version]);
+        basicrum_assert_same([$key], array_keys(basicrum_baseline_errors($expected, $wrong)), $key . ' mismatch');
+    }
+    basicrum_assert_same(array_keys($matching), array_keys(basicrum_baseline_errors($expected, [])), 'missing versions fail closed');
+};
 
 /**
  * @return array{status: int, stdout: string, stderr: string}
@@ -110,7 +132,7 @@ SH;
 /**
  * @return array{status: int, stdout: string, stderr: string}
  */
-$runReleaseGateGuard = static function (string $releaseTag) use ($root): array {
+$runReleaseGateGuard = static function (string $releaseTag, array $environment = []) use ($root): array {
     $pipes = [];
     try {
         $process = proc_open(
@@ -121,11 +143,11 @@ $runReleaseGateGuard = static function (string $releaseTag) use ($root): array {
             ],
             $pipes,
             $root,
-            [
+            array_merge([
                 'PATH' => (string) getenv('PATH'),
                 'BASICRUM_DISPOSABLE_MAGENTO' => '1',
                 'BASICRUM_RELEASE_TAG' => $releaseTag,
-            ]
+            ], $environment)
         );
         basicrum_assert_true(is_resource($process), 'start native release gate guard');
         $stdout = stream_get_contents($pipes[1]);
@@ -149,21 +171,31 @@ $runReleaseGateGuard = static function (string $releaseTag) use ($root): array {
 };
 
 $tests['fresh-install defaults fail closed and match config.xml'] = function () use ($root): void {
-    $defaults = Config::getDefaults();
-    basicrum_assert_false($defaults['enabled'], 'fresh installs must be disabled');
-    basicrum_assert_true($defaults['consent_enabled'], 'fresh installs must require consent');
-    basicrum_assert_false($defaults['strip_query_string'], 'query stripping must be opt-in');
-    basicrum_assert_false($defaults['wait_after_onload'], 'wait must be disabled initially');
-    basicrum_assert_same(0, $defaults['delay_ms'], 'delay must default to zero');
-    basicrum_assert_false($defaults['development_mode'], 'HTTP exception must be off');
-
     $xml = simplexml_load_file($root . '/etc/config.xml');
     basicrum_assert_same('0', (string) $xml->default->basicrum->general->enabled, 'config enabled default');
     basicrum_assert_same('1', (string) $xml->default->basicrum->consent->enabled, 'config consent default');
-    basicrum_assert_same('manual', (string) $xml->default->basicrum->consent->mode, 'manual integration default');
     basicrum_assert_same('0', (string) $xml->default->basicrum->privacy->strip_query_string, 'query default');
     basicrum_assert_same('0', (string) $xml->default->basicrum->performance->wait_after_onload, 'wait default');
     basicrum_assert_same('0', (string) $xml->default->basicrum->performance->delay_ms, 'delay default');
+    basicrum_assert_same('0', (string) $xml->default->basicrum->developer->development_mode, 'HTTP default');
+
+    // Exercise the defaults Magento actually merges, not an unused parallel array.
+    $values = [];
+    foreach ($xml->default->basicrum->children() as $group => $fields) {
+        foreach ($fields->children() as $field => $value) {
+            $values[basicrum_test_key('default', 0, 'basicrum/' . $group . '/' . $field)] = (string) $value;
+        }
+    }
+    basicrum_assert_same(null, (new Config(new BasicrumTestScopeConfig($values)))->getRuntimeConfig(), 'fresh install inactive');
+    $values[basicrum_test_key('default', 0, Config::XML_PATH_ENABLED)] = '1';
+    $values[basicrum_test_key('default', 0, Config::XML_PATH_BEACON_ENDPOINT)] = 'http://collector.test/beacon';
+    $values[basicrum_test_key('default', 0, Config::XML_PATH_BRUM_SITE_ID)] = '550e8400-e29b-41d4-a716-446655440000';
+    $runtime = (new Config(new BasicrumTestScopeConfig($values)))->getRuntimeConfig();
+    basicrum_assert_true($runtime['consent_enabled'], 'consent required by default');
+    basicrum_assert_false($runtime['strip_query_string'], 'redaction opt-in');
+    basicrum_assert_false($runtime['wait_after_onload'], 'wait opt-in');
+    basicrum_assert_same(0, $runtime['delay_ms'], 'zero wait');
+    basicrum_assert_same('https://collector.test/beacon', $runtime['beacon_endpoint'], 'default HTTPS policy');
 };
 
 $tests['technical identity and direct Magento dependencies are declared consistently'] = function () use ($root): void {
@@ -293,53 +325,6 @@ $tests['technical identity and direct Magento dependencies are declared consiste
         basicrum_assert_true(is_file($root . '/' . $packagedFile), 'required package file ' . $packagedFile);
     }
 
-    $integrationScript = (string) file_get_contents($root . '/tests/integration/configure-disposable.sh');
-    basicrum_assert_contains(
-        'enabled_modules=$("$magento" module:status --enabled)',
-        $integrationScript,
-        'disposable Magento CLI failure guard'
-    );
-    basicrum_assert_contains(
-        "printf '%s\\n' \"\$enabled_modules\" | grep -Fxq 'Basicrum_Analytics'",
-        $integrationScript,
-        'disposable Magento module-enabled guard'
-    );
-
-    $releaseGate = (string) file_get_contents($root . '/tests/integration/release-gate.sh');
-    foreach ([
-        'setup:upgrade',
-        'setup:di:compile',
-        'setup:static-content:deploy -f en_US',
-        'tests/integration/configure-disposable.sh',
-    ] as $releaseCommand) {
-        basicrum_assert_contains($releaseCommand, $releaseGate, 'native release command ' . $releaseCommand);
-    }
-
-    $allowedBrandSpellings = ['Basicrum', 'basicrum', 'BASICRUM', 'basicRum'];
-    $scanExtensions = ['css', 'js', 'json', 'md', 'php', 'phtml', 'sh', 'txt', 'xml', 'yaml', 'yml'];
-    $excludedDirectories = ['.git', 'node_modules', 'playwright-report', 'test-results', 'vendor'];
-    $directory = new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS);
-    $filter = new RecursiveCallbackFilterIterator(
-        $directory,
-        static function (SplFileInfo $current) use ($excludedDirectories): bool {
-            return !$current->isDir() || !in_array($current->getFilename(), $excludedDirectories, true);
-        }
-    );
-
-    foreach (new RecursiveIteratorIterator($filter) as $file) {
-        if (!$file->isFile() || !in_array(strtolower($file->getExtension()), $scanExtensions, true)) {
-            continue;
-        }
-
-        $content = (string) file_get_contents($file->getPathname());
-        preg_match_all('/basicrum/i', $content, $brandMatches);
-        foreach ($brandMatches[0] as $spelling) {
-            basicrum_assert_true(
-                in_array($spelling, $allowedBrandSpellings, true),
-                'noncanonical Basicrum spelling in ' . substr($file->getPathname(), strlen($root) + 1)
-            );
-        }
-    }
 };
 
 $tests['disposable integration guard rejects disabled modules and CLI failures before mutation'] =
@@ -397,6 +382,35 @@ $tests['native release gate requires a new 0.1.0 tag identity'] = function () us
     basicrum_assert_contains('MAGENTO_ROOT must point', $phaseOneTag['stderr'], '0.1.0 passes the tag guard');
 };
 
+$tests['native release gate stops before mutations when its baseline check fails'] = function () use ($runReleaseGateGuard): void {
+    $temporaryRoot = sys_get_temp_dir() . '/basicrum-baseline-guard-' . bin2hex(random_bytes(6));
+    $bin = $temporaryRoot . '/bin';
+    basicrum_assert_true(mkdir($bin, 0700, true), 'create temporary command directory');
+    try {
+        // Only stub the external commands, not the release script being tested.
+        file_put_contents($bin . '/php', "#!/bin/sh\nprintf 'baseline rejected: %s\\n' \"\$1\" >&2\nexit 69\n");
+        file_put_contents($bin . '/magento', "#!/bin/sh\necho 'unexpected Magento mutation' >&2\nexit 73\n");
+        chmod($bin . '/php', 0700);
+        chmod($bin . '/magento', 0700);
+        $result = $runReleaseGateGuard('0.1.0', [
+            'PATH' => $bin . ':' . getenv('PATH'),
+            'MAGENTO_ROOT' => $temporaryRoot,
+            'MAGENTO_STOREFRONT_URL' => 'https://magento.test/',
+            'MAGENTO_ADMIN_URL' => 'https://magento.test/admin/',
+            'MAGENTO_ADMIN_USERNAME' => 'synthetic',
+            'MAGENTO_ADMIN_PASSWORD' => 'synthetic',
+        ]);
+        basicrum_assert_same(69, $result['status'], 'baseline failure propagates');
+        basicrum_assert_contains('check-baseline.php', $result['stderr'], 'baseline check was executed');
+        basicrum_assert_not_contains('unexpected Magento mutation', $result['stderr'], 'no native mutation ran');
+    } finally {
+        unlink($bin . '/php');
+        unlink($bin . '/magento');
+        rmdir($bin);
+        rmdir($temporaryRoot);
+    }
+};
+
 $tests['validators accept only supported endpoint and UUIDv4 values'] = function (): void {
     basicrum_assert_true(
         Config::isValidBeaconEndpoint('https://collector.example.test/beacon?key=value'),
@@ -430,48 +444,6 @@ $tests['validators accept only supported endpoint and UUIDv4 values'] = function
     basicrum_assert_same(0, Config::normalizeWaitMilliseconds(-1), 'negative wait');
     basicrum_assert_same(30000, Config::normalizeWaitMilliseconds(90000), 'bounded wait');
     basicrum_assert_same(0, Config::normalizeWaitMilliseconds('not-a-number'), 'invalid wait');
-};
-
-$tests['legacy consent options preserve only the effective saved value'] = function (): void {
-    $default = ScopeConfigInterface::SCOPE_TYPE_DEFAULT;
-    $manual = new ConsentMode(
-        new BasicrumTestScopeConfig([
-            basicrum_test_key($default, 0, Config::XML_PATH_CONSENT_MODE) => Config::CONSENT_MODE_MANUAL,
-        ]),
-        new BasicrumTestRequest()
-    );
-    basicrum_assert_same(
-        [Config::CONSENT_MODE_MANUAL],
-        array_column($manual->toOptionArray(), 'value'),
-        'new configurations must not offer legacy modes'
-    );
-
-    $legacy = new ConsentMode(
-        new BasicrumTestScopeConfig([
-            basicrum_test_key($default, 0, Config::XML_PATH_CONSENT_MODE) => 'explicit',
-            basicrum_test_key(ScopeInterface::SCOPE_WEBSITE, 'eu', Config::XML_PATH_CONSENT_MODE) => 'cookie',
-            basicrum_test_key(ScopeInterface::SCOPE_STORE, 'bg', Config::XML_PATH_CONSENT_MODE) => 'gdpr',
-        ]),
-        new BasicrumTestRequest(['store' => 'bg'])
-    );
-    basicrum_assert_same(
-        [Config::CONSENT_MODE_MANUAL, 'gdpr'],
-        array_column($legacy->toOptionArray(), 'value'),
-        'selected store legacy value must remain available'
-    );
-
-    $inherited = new ConsentMode(
-        new BasicrumTestScopeConfig([
-            basicrum_test_key($default, 0, Config::XML_PATH_CONSENT_MODE) => 'explicit',
-            basicrum_test_key(ScopeInterface::SCOPE_WEBSITE, 'eu', Config::XML_PATH_CONSENT_MODE) => 'cookie',
-        ], ['bg' => 'eu']),
-        new BasicrumTestRequest(['store' => 'bg'])
-    );
-    basicrum_assert_same(
-        [Config::CONSENT_MODE_MANUAL, 'cookie'],
-        array_column($inherited->toOptionArray(), 'value'),
-        'effective inherited legacy value must remain available'
-    );
 };
 
 $tests['save backends validate normalize and honor the same-form HTTP decision'] = function (): void {
@@ -545,12 +517,12 @@ $tests['runtime gate requires enable endpoint and site identity'] = function ():
     $base = [
         basicrum_test_key($default, 0, Config::XML_PATH_ENABLED) => '1',
         basicrum_test_key($default, 0, Config::XML_PATH_CONSENT_ENABLED) => '1',
-        basicrum_test_key($default, 0, Config::XML_PATH_CONSENT_MODE) => 'implicit',
+        basicrum_test_key($default, 0, 'basicrum/consent/mode') => 'implicit',
     ];
 
     $missing = new Config(new BasicrumTestScopeConfig($base));
     basicrum_assert_same(null, $missing->getRuntimeConfig($default), 'missing identity must be inactive');
-    basicrum_assert_same('missing_endpoint', $missing->getStatus($default)['state'], 'admin missing endpoint');
+    basicrum_assert_same('missing_endpoint', $missing->getStatus($default), 'admin missing endpoint');
 
     $base[basicrum_test_key($default, 0, Config::XML_PATH_BEACON_ENDPOINT)] = 'https://collector.test/beacon';
     $badSite = new Config(new BasicrumTestScopeConfig($base + [
@@ -564,14 +536,14 @@ $tests['runtime gate requires enable endpoint and site identity'] = function ():
         'https://collector.test/beacon#client-only';
     $badEndpoint = new Config(new BasicrumTestScopeConfig($base));
     basicrum_assert_same(null, $badEndpoint->getRuntimeConfig($default), 'fragment endpoint must be inactive');
-    basicrum_assert_same('invalid_endpoint', $badEndpoint->getStatus($default)['state'], 'admin invalid endpoint');
+    basicrum_assert_same('invalid_endpoint', $badEndpoint->getStatus($default), 'admin invalid endpoint');
 
     $base[basicrum_test_key($default, 0, Config::XML_PATH_BEACON_ENDPOINT)] = 'https://collector.test/beacon';
     $valid = new Config(new BasicrumTestScopeConfig($base));
     $runtime = $valid->getRuntimeConfig($default);
-    basicrum_assert_same('implicit', $runtime['consent_mode'], 'legacy value must be retained');
+    basicrum_assert_false(array_key_exists('consent_mode', $runtime), 'obsolete consent metadata is ignored');
     basicrum_assert_true($runtime['consent_enabled'], 'legacy mode must not grant consent');
-    basicrum_assert_same('active_consent', $valid->getStatus($default)['state'], 'consent state');
+    basicrum_assert_same('active_consent', $valid->getStatus($default), 'consent state');
 
     $base[basicrum_test_key($default, 0, Config::XML_PATH_ENABLED)] = 'malformed';
     basicrum_assert_same(

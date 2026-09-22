@@ -7,11 +7,9 @@
                 <enabled>0</enabled>
                 <beacon_endpoint></beacon_endpoint>
                 <brum_site_id></brum_site_id>
-                <boomerang_version>1.815.60</boomerang_version>
             </general>
             <consent>
                 <enabled>1</enabled>
-                <mode>manual</mode>
             </consent>
             <privacy>
                 <strip_query_string>0</strip_query_string>

@@ -54,11 +54,7 @@ class BeaconEndpoint extends Value
             );
         }
 
-        if (!$this->isHttpAllowed() && stripos($value, 'http://') === 0) {
-            $value = 'https://' . substr($value, 7);
-        }
-
-        $this->setValue($value);
+        $this->setValue(Config::normalizeBeaconEndpoint($value, $this->isHttpAllowed()));
 
         return parent::beforeSave();
     }

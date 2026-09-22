@@ -36,7 +36,6 @@ fi
 "$magento" config:set basicrum/general/beacon_endpoint https://collector.basicrum.test/beacon
 "$magento" config:set basicrum/general/brum_site_id 550e8400-e29b-41d4-a716-446655440000
 "$magento" config:set basicrum/consent/enabled 1
-"$magento" config:set basicrum/consent/mode manual
 "$magento" config:set basicrum/privacy/strip_query_string 1
 "$magento" config:set basicrum/performance/wait_after_onload 0
 "$magento" config:set basicrum/performance/delay_ms 0

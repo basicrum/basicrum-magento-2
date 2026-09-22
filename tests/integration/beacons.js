@@ -11,12 +11,19 @@ function requestParameters(request) {
   return parameters;
 }
 
-async function interceptBeacons(page) {
+async function guardNetwork(context, {
+  endpointUrl = beaconUrl,
+  storefrontUrl = process.env.MAGENTO_STOREFRONT_URL,
+  adminUrl = process.env.MAGENTO_ADMIN_URL,
+  blocked = []
+} = {}) {
   const beacons = [];
-  const endpoint = new URL(beaconUrl);
-  await page.route(
-    (url) => url.origin === endpoint.origin && url.pathname === endpoint.pathname,
-    (route) => {
+  const endpoint = new URL(endpointUrl);
+  const localOrigins = new Set([storefrontUrl, adminUrl].filter(Boolean).map(url => new URL(url).origin));
+  await context.route("**/*", async route => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (url.origin === endpoint.origin && url.pathname === endpoint.pathname) {
       beacons.push(route.request());
       return route.fulfill({
         status: 204,
@@ -24,8 +31,24 @@ async function interceptBeacons(page) {
         body: ""
       });
     }
-  );
-  return beacons;
+
+    const parameters = requestParameters(request);
+    const measurement = parameters.has("brum_site_id") || parameters.get("p_gen") === "mage2";
+    if (localOrigins.has(url.origin) && !measurement) {
+      return route.continue();
+    }
+
+    // Do not print query strings or POST bodies in failure diagnostics.
+    blocked.push(url.origin + url.pathname);
+    await route.abort("blockedbyclient");
+  });
+  // Boomerang uses HTTP, but do not let another script open an unguarded socket.
+  await context.routeWebSocket("**/*", socket => {
+    const url = new URL(socket.url());
+    blocked.push(url.origin + url.pathname);
+    socket.close();
+  });
+  return { beacons, blocked };
 }
 
-module.exports = { beaconUrl, interceptBeacons, requestParameters, siteId };
+module.exports = { beaconUrl, guardNetwork, requestParameters, siteId };

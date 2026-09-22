@@ -1,5 +1,5 @@
-const { test, expect } = require("@playwright/test");
-const { interceptBeacons, requestParameters, siteId } = require("./beacons");
+const { test, expect } = require("./fixtures");
+const { requestParameters, siteId } = require("./beacons");
 
 const storefrontUrl = process.env.MAGENTO_STOREFRONT_URL;
 test.skip(
@@ -7,9 +7,9 @@ test.skip(
   "Explicit disposable-store and offline checkout opt-ins are required; this test creates an order"
 );
 
-test("a real offline Luma checkout emits Checkout then Checkout Success", async ({ page }) => {
+test("a real offline Luma checkout emits Checkout then Checkout Success", async ({ page, beaconTraffic }) => {
   test.setTimeout(90000);
-  const beacons = await interceptBeacons(page);
+  const { beacons } = beaconTraffic;
 
   async function expectPageBeacon(label) {
     await page.waitForFunction(() => typeof window.OPT_IN_BASICRUM_LOADER_WRAPPER === "function");

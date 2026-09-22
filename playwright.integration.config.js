@@ -12,6 +12,7 @@ module.exports = defineConfig({
   use: {
     browserName: "chromium",
     headless: true,
+    serviceWorkers: "block",
     ignoreHTTPSErrors: true
   }
 });

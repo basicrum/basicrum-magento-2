@@ -1,5 +1,5 @@
-const { test, expect } = require("@playwright/test");
-const { interceptBeacons, requestParameters, siteId } = require("./beacons");
+const { test, expect } = require("./fixtures");
+const { requestParameters, siteId } = require("./beacons");
 const { expectStorefrontCsp } = require("./csp");
 
 const storefrontUrl = process.env.MAGENTO_STOREFRONT_URL;
@@ -15,9 +15,9 @@ test("empty-cart checkout retains core and collector sources in enforcing CSP", 
   expectStorefrontCsp(response.headers()["content-security-policy"]);
 });
 
-test("rendered Magento storefront stays silent until allow and sends the expected beacon", async ({ context, page }) => {
+test("rendered Magento storefront stays silent until allow and sends the expected beacon", async ({ context, page, beaconTraffic }) => {
   const errors = [];
-  const beacons = await interceptBeacons(page);
+  const { beacons } = beaconTraffic;
   let boomerangRequests = 0;
 
   page.on("pageerror", (error) => errors.push(error.message));

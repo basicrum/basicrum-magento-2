@@ -46,6 +46,48 @@ Use a dedicated collector origin that no other module whitelists in Admin;
 otherwise origin absence cannot isolate Basicrum's contribution. Scope
 switching is read-only: the test never saves configuration.
 
+## Network isolation
+
+All browser contexts, including popups, intercept the configured beacon origin
+and path and return a local response. Other direct requests are allowed only
+to `MAGENTO_STOREFRONT_URL` and `MAGENTO_ADMIN_URL` origins; unexpected beacon
+identity payloads are blocked even at another path on those origins. Unexpected
+requests fail the test, with URLs logged without query strings or POST bodies.
+Service workers and WebSockets are blocked.
+
+A loopback test proxy permits only the storefront/Admin host and port pairs,
+never the collector. This also stops external destinations reached through
+redirect chains, which Playwright's route handler alone does not re-intercept.
+Use dedicated disposable origins and same-origin assets. Disable external
+payment/analytics scripts in that installation; do not whitelist their hosts
+to make a failed test pass. This is browser-request isolation, not an OS-level
+firewall or a sandbox for Magento's server-side integrations. Keep outbound
+email and other server-side services isolated separately.
+
+## Native configuration-save checks
+
+With this checkout installed and native DI current, run:
+
+```sh
+BASICRUM_DISPOSABLE_MAGENTO=1 \
+MAGENTO_ROOT=/absolute/path/to/disposable-magento \
+php tests/integration/config-save.php
+```
+
+This boots Magento's Admin area and uses the actual `Magento\Config\Model\Config`
+save model, not the lightweight PHP doubles. It checks defaults, endpoint/UUID
+validation, HTTP normalization and same-form changes, bounded waits, website/store
+overrides and re-inheritance, deliberate immediate consent, and fail-closed
+runtime behavior after invalid imports. It does not automate submission of the
+Admin HTML form; the browser suite separately covers its rendering.
+
+Each case runs within an outer database transaction and rolls back all Basicrum
+fixture rows, including after validation exceptions. Configuration caching is
+disabled only in that PHP process so fixture values cannot enter shared config
+cache. Original rows are compared after rollback. Use disposable data only:
+native save events can invalidate caches or trigger third-party observers, and
+those non-database side effects are not rolled back. No order is created.
+
 ## Page-type alignment checks
 
 The suite also checks Magento 1-aligned labels in real beacons from public
@@ -116,8 +158,15 @@ not bypass Admin secret-key URLs. The disposable Admin account must be able to
 open that page, and login challenges such as two-factor authentication or
 CAPTCHA must be disabled for this isolated test account.
 
-The gate runs `setup:upgrade`, dependency-injection compilation, and an English
-static-content deployment before applying the test configuration. Playwright
+Before any upgrade/configuration write, the gate compares the installed Magento
+Open Source patch exactly and the PHP, Composer, MariaDB, and OpenSearch
+major/minor lines with `baseline.env`. Missing versions, a different edition,
+or a mismatch fail the gate; there is no bypass flag. Supplemental tests on
+another platform do not certify this release baseline.
+
+The gate then runs `setup:upgrade`, dependency-injection compilation, an English
+static-content deployment, and the native configuration-save tests before
+applying the browser test configuration. Playwright
 then exercises the rendered storefront and intercepted beacon, reloads a warm
 full-page-cache response, logs into Magento Admin, and verifies that the
 Basicrum logo and required configuration/status fields render. Any command,

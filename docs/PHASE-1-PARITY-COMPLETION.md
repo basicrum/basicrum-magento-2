@@ -41,9 +41,9 @@ unchanged.
 
 There is no data migration. Existing paths and values remain stored. Explicit
 `consent/enabled=0` selects immediate loading; `1` selects consent-controlled
-loading. The currently effective legacy mode remains visible but behaves only
-as manual-integration metadata and never grants consent; unrelated legacy modes
-cannot be newly selected. Existing sites require the new Site ID before
+loading. The obsolete consent-mode selector and runtime metadata have been
+removed; any old mode rows remain untouched in the database but are ignored and
+never grant consent. Existing sites require the new Site ID before
 monitoring resumes. Endpoint queries remain compatible, while embedded URL
 credentials and fragments now fail validation. The unstored hardcoded
 five-second wait becomes explicit off/zero settings; administrators can opt
@@ -90,6 +90,11 @@ They strengthen R-007/R-008 CSP and rendered-wait coverage, R-009 production
 autoload/CI checks, R-002 scoped Admin presentation, and R-010 documentation.
 That report contains the newer local execution results and explicitly separates
 the supplemental 2.4.9 store from the still-required pinned release baseline.
+
+The subsequent reliability and simplification work is recorded in
+`RELIABILITY-AND-MAINTAINABILITY.md`: native configuration-save checks,
+fail-closed browser traffic, enforced release-baseline versions, and removal
+of obsolete consent-mode and duplicate configuration/test machinery.
 
 D-002 staff exclusion, D-003 placement/readiness queues, and D-004 cross-plugin
 wording remain deferred. Automatic provider adapters,

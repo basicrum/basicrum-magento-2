@@ -15,21 +15,13 @@ class Config
     public const XML_PATH_BEACON_ENDPOINT = 'basicrum/general/beacon_endpoint';
     public const XML_PATH_BRUM_SITE_ID = 'basicrum/general/brum_site_id';
     public const XML_PATH_CONSENT_ENABLED = 'basicrum/consent/enabled';
-    public const XML_PATH_CONSENT_MODE = 'basicrum/consent/mode';
     public const XML_PATH_STRIP_QUERY_STRING = 'basicrum/privacy/strip_query_string';
     public const XML_PATH_WAIT_ENABLED = 'basicrum/performance/wait_after_onload';
     public const XML_PATH_WAIT_MS = 'basicrum/performance/delay_ms';
     public const XML_PATH_DEVELOPMENT_MODE = 'basicrum/developer/development_mode';
 
     public const BOOMERANG_VERSION = '1.815.60';
-    public const CONSENT_MODE_MANUAL = 'manual';
     public const MAX_WAIT_MS = 30000;
-
-    /**
-     * Legacy values are retained so an upgrade never discards saved data.
-     * They all mean manual callback integration and never imply consent.
-     */
-    public const LEGACY_CONSENT_MODES = ['explicit', 'implicit', 'cookie', 'gdpr'];
 
     private const BRUM_SITE_ID_PATTERN =
         '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i';
@@ -37,26 +29,6 @@ class Config
     public function __construct(
         private ScopeConfigInterface $scopeConfig
     ) {
-    }
-
-    /**
-     * Defaults used by config.xml and by runtime normalization.
-     *
-     * @return array<string, bool|int|string>
-     */
-    public static function getDefaults(): array
-    {
-        return [
-            'enabled' => false,
-            'beacon_endpoint' => '',
-            'brum_site_id' => '',
-            'consent_enabled' => true,
-            'consent_mode' => self::CONSENT_MODE_MANUAL,
-            'strip_query_string' => false,
-            'wait_after_onload' => false,
-            'delay_ms' => 0,
-            'development_mode' => false,
-        ];
     }
 
     /**
@@ -69,27 +41,19 @@ class Config
         string $scopeType = ScopeInterface::SCOPE_STORE,
         $scopeCode = null
     ): ?array {
-        if (!$this->getBoolean(self::XML_PATH_ENABLED, false, $scopeType, $scopeCode)) {
-            return null;
-        }
-
-        $endpoint = $this->getBeaconEndpoint($scopeType, $scopeCode);
-        $siteId = $this->getBrumSiteId($scopeType, $scopeCode);
-
-        if ($endpoint === null || $siteId === null) {
+        // Admin feedback and storefront eligibility use the same decision.
+        $state = $this->getStatus($scopeType, $scopeCode);
+        if (!in_array($state, ['active_consent', 'active_immediate'], true)) {
             return null;
         }
 
         return [
-            'beacon_endpoint' => $endpoint,
-            'brum_site_id' => $siteId,
-            'consent_enabled' => $this->getBoolean(
-                self::XML_PATH_CONSENT_ENABLED,
-                true,
-                $scopeType,
-                $scopeCode
+            'beacon_endpoint' => self::normalizeBeaconEndpoint(
+                $this->getString(self::XML_PATH_BEACON_ENDPOINT, $scopeType, $scopeCode),
+                $this->getBoolean(self::XML_PATH_DEVELOPMENT_MODE, false, $scopeType, $scopeCode)
             ),
-            'consent_mode' => $this->getConsentMode($scopeType, $scopeCode),
+            'brum_site_id' => $this->getString(self::XML_PATH_BRUM_SITE_ID, $scopeType, $scopeCode),
+            'consent_enabled' => $state === 'active_consent',
             'strip_query_string' => $this->getBoolean(
                 self::XML_PATH_STRIP_QUERY_STRING,
                 false,
@@ -112,38 +76,29 @@ class Config
      * Describe why the effective scope is active or inactive for admin feedback.
      *
      * @param string|int|null $scopeCode
-     * @return array{state: string, consent_mode: string}
      */
     public function getStatus(
         string $scopeType = ScopeInterface::SCOPE_STORE,
         $scopeCode = null
-    ): array {
+    ): string {
         if (!$this->getBoolean(self::XML_PATH_ENABLED, false, $scopeType, $scopeCode)) {
-            return ['state' => 'disabled', 'consent_mode' => $this->getConsentMode($scopeType, $scopeCode)];
+            return 'disabled';
         }
 
-        $rawEndpoint = trim((string) $this->scopeConfig->getValue(
-            self::XML_PATH_BEACON_ENDPOINT,
-            $scopeType,
-            $scopeCode
-        ));
+        $rawEndpoint = $this->getString(self::XML_PATH_BEACON_ENDPOINT, $scopeType, $scopeCode);
         if ($rawEndpoint === '') {
-            return ['state' => 'missing_endpoint', 'consent_mode' => $this->getConsentMode($scopeType, $scopeCode)];
+            return 'missing_endpoint';
         }
         if (!self::isValidBeaconEndpoint($rawEndpoint)) {
-            return ['state' => 'invalid_endpoint', 'consent_mode' => $this->getConsentMode($scopeType, $scopeCode)];
+            return 'invalid_endpoint';
         }
 
-        $rawSiteId = trim((string) $this->scopeConfig->getValue(
-            self::XML_PATH_BRUM_SITE_ID,
-            $scopeType,
-            $scopeCode
-        ));
+        $rawSiteId = $this->getString(self::XML_PATH_BRUM_SITE_ID, $scopeType, $scopeCode);
         if ($rawSiteId === '') {
-            return ['state' => 'missing_site_id', 'consent_mode' => $this->getConsentMode($scopeType, $scopeCode)];
+            return 'missing_site_id';
         }
         if (!self::isValidBrumSiteId($rawSiteId)) {
-            return ['state' => 'invalid_site_id', 'consent_mode' => $this->getConsentMode($scopeType, $scopeCode)];
+            return 'invalid_site_id';
         }
 
         $consentRequired = $this->getBoolean(
@@ -153,10 +108,7 @@ class Config
             $scopeCode
         );
 
-        return [
-            'state' => $consentRequired ? 'active_consent' : 'active_immediate',
-            'consent_mode' => $this->getConsentMode($scopeType, $scopeCode),
-        ];
+        return $consentRequired ? 'active_consent' : 'active_immediate';
     }
 
     /**
@@ -229,61 +181,19 @@ class Config
     /**
      * @param string|int|null $scopeCode
      */
-    private function getBeaconEndpoint(string $scopeType, $scopeCode): ?string
+    private function getString(string $path, string $scopeType, $scopeCode): string
     {
-        $endpoint = trim((string) $this->scopeConfig->getValue(
-            self::XML_PATH_BEACON_ENDPOINT,
-            $scopeType,
-            $scopeCode
-        ));
-
-        if (!self::isValidBeaconEndpoint($endpoint)) {
-            return null;
-        }
-
-        $developmentMode = $this->getBoolean(
-            self::XML_PATH_DEVELOPMENT_MODE,
-            false,
-            $scopeType,
-            $scopeCode
-        );
-        if (!$developmentMode && stripos($endpoint, 'http://') === 0) {
-            $endpoint = 'https://' . substr($endpoint, 7);
-        }
-
-        return $endpoint;
+        return trim((string) $this->scopeConfig->getValue($path, $scopeType, $scopeCode));
     }
 
     /**
-     * @param string|int|null $scopeCode
+     * Apply the same HTTPS policy at save time and runtime after validation.
      */
-    private function getBrumSiteId(string $scopeType, $scopeCode): ?string
+    public static function normalizeBeaconEndpoint(string $endpoint, bool $httpAllowed): string
     {
-        $siteId = trim((string) $this->scopeConfig->getValue(
-            self::XML_PATH_BRUM_SITE_ID,
-            $scopeType,
-            $scopeCode
-        ));
-
-        return self::isValidBrumSiteId($siteId) ? $siteId : null;
-    }
-
-    /**
-     * @param string|int|null $scopeCode
-     */
-    private function getConsentMode(string $scopeType, $scopeCode): string
-    {
-        $mode = trim((string) $this->scopeConfig->getValue(
-            self::XML_PATH_CONSENT_MODE,
-            $scopeType,
-            $scopeCode
-        ));
-
-        if ($mode === self::CONSENT_MODE_MANUAL || in_array($mode, self::LEGACY_CONSENT_MODES, true)) {
-            return $mode;
-        }
-
-        return self::CONSENT_MODE_MANUAL;
+        return !$httpAllowed && stripos($endpoint, 'http://') === 0
+            ? 'https://' . substr($endpoint, 7)
+            : $endpoint;
     }
 
     /**
