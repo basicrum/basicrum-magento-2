@@ -11,6 +11,7 @@ Install this checkout as `app/code/Basicrum/Analytics` (module
 reachable before running this harness. Then:
 
 ```sh
+npm ci
 BASICRUM_DISPOSABLE_MAGENTO=1 \
 MAGENTO_ROOT=/absolute/path/to/disposable-magento \
 MAGENTO_STOREFRONT_URL=https://magento.test/ \
@@ -21,15 +22,30 @@ Set `BASICRUM_DEPLOY_STATIC=1` when the installation uses production static
 content rather than developer-mode asset materialization. The script changes
 Basicrum settings and cleans Magento caches, so it refuses to run unless the
 explicit disposable-installation guard is present.
+It also requires the locally installed Playwright runner before changing settings;
+missing dependencies fail with an `npm ci` instruction, without downloading a
+different runner.
 
 The browser opens the rendered storefront, verifies the consent loader is in
 the page, confirms no Boomerang request, beacon, `RT`, or `BA` cookie occurs
 before allow, calls the public API twice, intercepts the local beacon, and
 asserts URL redaction plus `p_type`, `p_gen`, and `brum_site_id`. It then checks
-withdrawal cookie cleanup, reloads the page to exercise a warm full-page-cache
-response, and proves that the new page still waits for a fresh allow decision.
+withdrawal cookie cleanup and requires an actual `X-Magento-Cache-Debug: HIT`
+on the subsequent navigation. It proves that the cached page waits for a fresh
+allow decision, stays cookie/beacon-silent beforehand, and then sends the same
+expected identity and redaction fields.
 It therefore covers the real layout, template, CSP path, static asset URL,
 cached HTML, and bundled Boomerang rather than a copied fixture.
+
+Enable full-page caching and use a cacheable homepage. For built-in FPC, the
+disposable installation must be in developer mode so Magento emits its debug
+header. Magento's Varnish VCL also emits that header; any proxy in front must
+preserve it. Do not manufacture a `HIT` header in the web server. Missing headers,
+`MISS`, and `UNCACHEABLE` fail rather than skipping coverage. An extra pre-consent
+navigation warms the anonymous visitor's cookie/vary context. Browser routing
+disables the browser HTTP cache, so it cannot substitute for server FPC here.
+This check covers the selected store/homepage, not cross-store cache isolation,
+automatic invalidation after settings changes (CR-D-002), or a Varnish matrix.
 
 The CSP assertions require the baseline's enabled `Magento_Paypal` module:
 `www.paypal.com` from its `csp_whitelist.xml` must survive alongside core
@@ -111,7 +127,7 @@ MAGENTO_STOREFRONT_URL=https://magento.test/ \
 MAGENTO_BEACON_URL=https://collector.basicrum.test/beacon \
 MAGENTO_SITE_ID=550e8400-e29b-41d4-a716-446655440000 \
 MAGENTO_SAMPLE_DATA=1 \
-npx playwright test --config=playwright.integration.config.js
+npx --no-install playwright test --config=playwright.integration.config.js
 ```
 
 `checkout-page-types.spec.js` is separately guarded. In addition to the URL
@@ -158,7 +174,18 @@ not bypass Admin secret-key URLs. The disposable Admin account must be able to
 open that page, and login challenges such as two-factor authentication or
 CAPTCHA must be disabled for this isolated test account.
 
-Before any upgrade/configuration write, the gate compares the installed Magento
+The gate requires Git and a clean, committed module checkout, including no
+untracked files. Magento may register that checkout directly or an exact copy.
+Before any upgrade/configuration write it resolves `Basicrum_Analytics` through
+Magento's actual `ComponentRegistrar` and compares SHA-256 hashes of package
+files (including PHP, XML, templates, assets, notices, and top-level metadata).
+Missing, modified, and extra files fail. Only development/output directories
+are excluded: `.git`, `.github`, `docs`, `tests`, `node_modules`, `vendor`,
+`.test-results`, `test-results`, and `playwright-report`. Internal source symlinks
+are rejected; the module directory itself may be a symlink. Copy the complete
+checkout when using a separate installed directory, not selected PHP files.
+
+The gate then compares the installed Magento
 Open Source patch exactly and the PHP, Composer, MariaDB, and OpenSearch
 major/minor lines with `baseline.env`. Missing versions, a different edition,
 or a mismatch fail the gate; there is no bypass flag. Supplemental tests on
@@ -171,8 +198,16 @@ then exercises the rendered storefront and intercepted beacon, reloads a warm
 full-page-cache response, logs into Magento Admin, and verifies that the
 Basicrum logo and required configuration/status fields render. Any command,
 login, rendering assertion, or browser check failure blocks the tag.
+Afterward it rechecks both the clean checkout/commit and installed file identity.
+The final success line records the candidate SHA and intended tag; retain the
+command output as release evidence and tag only that exact commit. Do not edit
+or resync either tree during the gate. These checks tie source evidence to the
+candidate; they do not replace a future installable-artifact smoke test.
 
 This repository does not provision Magento or store Admin credentials in CI.
 Consequently the native gate remains a separately required release check on a
 maintained disposable installation; adding the script does not mean it has
 already passed.
+Regular CI runs only native browser test discovery (`--list`) to catch syntax
+and import errors without a Magento installation. Discovery is not native test
+execution or release certification.

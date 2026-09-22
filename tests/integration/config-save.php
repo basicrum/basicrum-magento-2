@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 use Basicrum\Analytics\Model\Config;
 use Magento\Config\Model\ConfigFactory;
+use Magento\Config\Model\Config\TypePool;
 use Magento\Framework\App\Cache\StateInterface;
 use Magento\Framework\App\Config\ReinitableConfigInterface;
 use Magento\Framework\App\ResourceConnection;
@@ -74,10 +75,13 @@ $expectInvalid = static function (array $fields) use ($save): void {
 };
 
 $tests = [];
-$tests['native XML defaults disable monitoring and require consent'] = static function () use ($scopeConfig, $config, $assertSame): void {
+$tests['native XML defaults and environment-specific HTTP policy'] = static function () use ($scopeConfig, $config, $assertSame, $objectManager): void {
     $assertSame('0', (string) $scopeConfig->getValue(Config::XML_PATH_ENABLED, 'default'), 'enabled default');
     $assertSame('1', (string) $scopeConfig->getValue(Config::XML_PATH_CONSENT_ENABLED, 'default'), 'consent default');
     $assertSame(null, $config->getRuntimeConfig(), 'fresh native runtime gate');
+    $pool = $objectManager->get(TypePool::class);
+    $assertSame(true, $pool->isPresent(Config::XML_PATH_DEVELOPMENT_MODE, TypePool::TYPE_ENVIRONMENT), 'HTTP exception belongs to this environment');
+    $assertSame(false, $pool->isPresent(Config::XML_PATH_CONSENT_ENABLED, TypePool::TYPE_ENVIRONMENT), 'consent export classification unchanged');
 };
 $tests['native backend normalizes HTTPS and bounds the wait'] = static function () use ($save, $siteId, $raw, $config, $assertSame): void {
     $save([

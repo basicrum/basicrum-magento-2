@@ -32,6 +32,12 @@ if ! printf '%s\n' "$enabled_modules" | grep -Fxq 'Basicrum_Analytics'; then
     exit 1
 fi
 
+# Fail before configuration writes instead of allowing npx to fetch an unpinned runner.
+if [ ! -x "$module_root/node_modules/.bin/playwright" ]; then
+    echo "Pinned Playwright is missing. Run npm ci in the module checkout first." >&2
+    exit 1
+fi
+
 "$magento" config:set basicrum/general/enabled 1
 "$magento" config:set basicrum/general/beacon_endpoint https://collector.basicrum.test/beacon
 "$magento" config:set basicrum/general/brum_site_id 550e8400-e29b-41d4-a716-446655440000
@@ -49,4 +55,4 @@ fi
 MAGENTO_STOREFRONT_URL="$MAGENTO_STOREFRONT_URL" \
 MAGENTO_BEACON_URL=https://collector.basicrum.test/beacon \
 MAGENTO_SITE_ID=550e8400-e29b-41d4-a716-446655440000 \
-    npx playwright test --config=playwright.integration.config.js
+    "$module_root/node_modules/.bin/playwright" test --config=playwright.integration.config.js

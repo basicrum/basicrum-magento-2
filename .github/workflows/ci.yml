@@ -64,8 +64,11 @@ jobs:
       - name: Install test dependencies
         run: npm ci
 
+      - name: Check native integration test discovery (no Magento execution)
+        run: npx --no-install playwright test --config=playwright.integration.config.js --list
+
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: npx --no-install playwright install --with-deps chromium
 
       - name: Run loader and real-Boomerang checks
         run: npm test

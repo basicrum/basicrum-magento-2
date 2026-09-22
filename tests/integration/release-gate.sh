@@ -33,6 +33,9 @@ fi
 
 module_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 magento="${MAGENTO_ROOT}/bin/magento"
+candidate_commit=$(sh "$module_root/tests/integration/check-candidate.sh")
+echo "Checking Basicrum candidate ${candidate_commit} for ${BASICRUM_RELEASE_TAG}."
+php "$module_root/tests/integration/check-installed-candidate.php"
 
 cd "$MAGENTO_ROOT"
 php "$module_root/tests/integration/check-baseline.php"
@@ -43,3 +46,12 @@ php "$module_root/tests/integration/config-save.php"
 
 cd "$module_root"
 BASICRUM_DEPLOY_STATIC=0 tests/integration/configure-disposable.sh
+
+# Do not certify a checkout or installed copy that changed while the gate ran.
+final_commit=$(sh "$module_root/tests/integration/check-candidate.sh")
+if [ "$final_commit" != "$candidate_commit" ]; then
+    echo "The candidate commit changed during the release gate; rerun it." >&2
+    exit 1
+fi
+php "$module_root/tests/integration/check-installed-candidate.php"
+echo "PASS: release gate for ${BASICRUM_RELEASE_TAG}, candidate commit ${candidate_commit}."

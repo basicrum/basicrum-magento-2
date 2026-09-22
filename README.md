@@ -76,7 +76,14 @@ Collection controls:
   is bounded to 30,000 milliseconds.
 - **Allow HTTP Beacon Endpoint** defaults to No and is intended only for local
   development. Without it, saved and effective HTTP endpoints are upgraded to
-  HTTPS.
+  HTTPS. Magento classifies this exception as environment-specific: configuration
+  dumps put it in `app/etc/env.php`, not shared `app/etc/config.php`. Do not promote
+  development `env.php` values to production. This follows Magento's native
+  [configuration deployment rules](https://experienceleague.adobe.com/en/docs/commerce-operations/configuration-guide/deployment/technical-details).
+  Existing database values and previously exported files are not rewritten;
+  review any old shared export of `basicrum/developer/development_mode` before
+  re-exporting configuration. The default, configuration path, and scope
+  inheritance are unchanged.
 
 The runtime emits Magento 1's exact named `p_type` values for equivalent
 Magento 2 pages (for example, `Home`, `Product`, `Search`, and
@@ -217,10 +224,16 @@ test. External payment scripts must be disabled in that test installation.
 The regular CI workflow runs strict Composer 2.10 validation and optimized
 production classmap checks plus the fast PHP and Chromium checks. Browser
 retries in CI retain diagnostics, but a flaky pass still fails the job.
+CI also discovers the native browser tests with `--list`; this catches load-time
+errors but does not execute Magento integration tests.
 Before tagging Phase 1 as `0.1.0`, the documented native
-release gate is also required: it first enforces all versions in `baseline.env`,
+release gate is also required: it requires a clean candidate checkout, verifies
+the registered installed module matches it, and enforces all versions in `baseline.env`,
 then runs Magento upgrade, DI compilation, static deployment, native save tests,
-storefront/beacon assertions, and an authenticated Admin rendering check.
+storefront/beacon assertions with a proven full-page-cache HIT, and an authenticated
+Admin rendering check. It rechecks candidate identity afterward and records the
+tested commit SHA in its success output. Run `npm ci` first: the native runner
+uses only the installed Playwright binary, never an automatic download.
 The disposable Magento gate needs a provisioned installation and test
 Admin account and is not reported as passing unless it is run separately.
 

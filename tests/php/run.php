@@ -32,6 +32,7 @@ require $root . '/Model/System/Config/Backend/BrumSiteId.php';
 require $root . '/Model/System/Config/Backend/WaitMilliseconds.php';
 require __DIR__ . '/footer-fixture.php';
 require $root . '/tests/integration/baseline.php';
+require $root . '/tests/integration/candidate-files.php';
 
 /** @var array<string, Closure> $tests */
 $tests = [];
@@ -62,10 +63,18 @@ $tests['release baseline rejects wrong or missing platform versions'] = function
 /**
  * @return array{status: int, stdout: string, stderr: string}
  */
-$runDisposableGuard = static function (string $moduleOutput, int $moduleStatus) use ($root): array {
+$runDisposableGuard = static function (string $moduleOutput, int $moduleStatus, bool $withRunner = true) use ($root): array {
     $temporaryRoot = sys_get_temp_dir() . '/basicrum-magento-guard-' . bin2hex(random_bytes(6));
     $temporaryBin = $temporaryRoot . '/bin';
     basicrum_assert_true(mkdir($temporaryBin, 0700, true), 'create temporary Magento root');
+    $module = $temporaryRoot . '/module';
+    mkdir($module . '/tests/integration', 0700, true);
+    mkdir($module . '/node_modules/.bin', 0700, true);
+    copy($root . '/tests/integration/configure-disposable.sh', $module . '/tests/integration/configure-disposable.sh');
+    if ($withRunner) {
+        file_put_contents($module . '/node_modules/.bin/playwright', "#!/bin/sh\nexit 74\n");
+        chmod($module . '/node_modules/.bin/playwright', 0700);
+    }
 
     $fakeMagento = $temporaryBin . '/magento';
     $fakeMagentoScript = <<<'SH'
@@ -83,7 +92,7 @@ SH;
     $pipes = [];
     try {
         $process = proc_open(
-            ['/bin/sh', $root . '/tests/integration/configure-disposable.sh'],
+            ['/bin/sh', $module . '/tests/integration/configure-disposable.sh'],
             [
                 1 => ['pipe', 'w'],
                 2 => ['pipe', 'w'],
@@ -123,6 +132,15 @@ SH;
         if (is_dir($temporaryBin)) {
             rmdir($temporaryBin);
         }
+        if ($withRunner) {
+            unlink($module . '/node_modules/.bin/playwright');
+        }
+        unlink($module . '/tests/integration/configure-disposable.sh');
+        rmdir($module . '/tests/integration');
+        rmdir($module . '/tests');
+        rmdir($module . '/node_modules/.bin');
+        rmdir($module . '/node_modules');
+        rmdir($module);
         if (is_dir($temporaryRoot)) {
             rmdir($temporaryRoot);
         }
@@ -248,6 +266,10 @@ $tests['technical identity and direct Magento dependencies are declared consiste
     );
 
     $di = simplexml_load_file($root . '/etc/di.xml');
+    $environment = $di->xpath('//type[@name="Magento\\Config\\Model\\Config\\TypePool"]/arguments/argument[@name="environment"]/item');
+    basicrum_assert_same(1, count($environment), 'only the development HTTP exception changes export classification');
+    basicrum_assert_same(Config::XML_PATH_DEVELOPMENT_MODE, (string) $environment[0]['name'], 'environment-specific path');
+    basicrum_assert_same('1', trim((string) $environment[0]), 'HTTP exception excluded from shared configuration');
     basicrum_assert_same(
         'Basicrum\\Analytics\\Api\\PageTypeDetectorInterface',
         (string) $di->preference['for'],
@@ -369,6 +391,10 @@ $tests['disposable integration guard accepts an enabled canonical module'] = fun
         $enabled['stdout'] . $enabled['stderr'],
         'enabled module is accepted'
     );
+    $missingRunner = $runDisposableGuard('Basicrum_Analytics', 0, false);
+    basicrum_assert_same(1, $missingRunner['status'], 'missing pinned runner fails before configuration writes');
+    basicrum_assert_contains('Run npm ci', $missingRunner['stderr'], 'actionable dependency error');
+    basicrum_assert_not_contains('configuration mutation', $missingRunner['stderr'], 'no mutation without the runner');
 };
 
 $tests['native release gate requires a new 0.1.0 tag identity'] = function () use ($runReleaseGateGuard): void {
@@ -382,31 +408,109 @@ $tests['native release gate requires a new 0.1.0 tag identity'] = function () us
     basicrum_assert_contains('MAGENTO_ROOT must point', $phaseOneTag['stderr'], '0.1.0 passes the tag guard');
 };
 
-$tests['native release gate stops before mutations when its baseline check fails'] = function () use ($runReleaseGateGuard): void {
+$tests['native release gate stops before mutations when identity or baseline checks fail'] = function () use ($runReleaseGateGuard): void {
     $temporaryRoot = sys_get_temp_dir() . '/basicrum-baseline-guard-' . bin2hex(random_bytes(6));
     $bin = $temporaryRoot . '/bin';
     basicrum_assert_true(mkdir($bin, 0700, true), 'create temporary command directory');
     try {
         // Only stub the external commands, not the release script being tested.
-        file_put_contents($bin . '/php', "#!/bin/sh\nprintf 'baseline rejected: %s\\n' \"\$1\" >&2\nexit 69\n");
+        file_put_contents($bin . '/php', <<<'SH'
+#!/bin/sh
+case "$1" in
+    */check-installed-candidate.php)
+        if [ "${BASICRUM_FAKE_SOURCE_MISMATCH:-0}" = "1" ]; then
+            echo 'installed candidate mismatch' >&2
+            exit 68
+        fi
+        exit 0 ;;
+    */check-baseline.php) echo "baseline rejected: $1" >&2; exit 69 ;;
+esac
+exit 75
+SH);
+        file_put_contents($bin . '/git', <<<'SH'
+#!/bin/sh
+case "$3 $4" in
+    'rev-parse --show-toplevel') printf '%s\n' "$2" ;;
+    'status --porcelain') exit 0 ;;
+    'rev-parse --verify') echo '1111111111111111111111111111111111111111' ;;
+    *) exit 76 ;;
+esac
+SH);
         file_put_contents($bin . '/magento', "#!/bin/sh\necho 'unexpected Magento mutation' >&2\nexit 73\n");
         chmod($bin . '/php', 0700);
+        chmod($bin . '/git', 0700);
         chmod($bin . '/magento', 0700);
-        $result = $runReleaseGateGuard('0.1.0', [
+        $environment = [
             'PATH' => $bin . ':' . getenv('PATH'),
             'MAGENTO_ROOT' => $temporaryRoot,
             'MAGENTO_STOREFRONT_URL' => 'https://magento.test/',
             'MAGENTO_ADMIN_URL' => 'https://magento.test/admin/',
             'MAGENTO_ADMIN_USERNAME' => 'synthetic',
             'MAGENTO_ADMIN_PASSWORD' => 'synthetic',
-        ]);
+        ];
+        $mismatched = $runReleaseGateGuard('0.1.0', $environment + ['BASICRUM_FAKE_SOURCE_MISMATCH' => '1']);
+        basicrum_assert_same(68, $mismatched['status'], 'installed candidate mismatch propagates');
+        basicrum_assert_contains('installed candidate mismatch', $mismatched['stderr'], 'installed identity was checked');
+        basicrum_assert_not_contains('baseline rejected', $mismatched['stderr'], 'identity fails before native baseline bootstrap');
+        basicrum_assert_not_contains('unexpected Magento mutation', $mismatched['stderr'], 'no mutation on identity mismatch');
+        $result = $runReleaseGateGuard('0.1.0', $environment);
         basicrum_assert_same(69, $result['status'], 'baseline failure propagates');
         basicrum_assert_contains('check-baseline.php', $result['stderr'], 'baseline check was executed');
         basicrum_assert_not_contains('unexpected Magento mutation', $result['stderr'], 'no native mutation ran');
     } finally {
         unlink($bin . '/php');
+        unlink($bin . '/git');
         unlink($bin . '/magento');
         rmdir($bin);
+        rmdir($temporaryRoot);
+    }
+};
+
+$tests['candidate identity rejects stale missing extra and linked installed source'] = function (): void {
+    $temporaryRoot = sys_get_temp_dir() . '/basicrum-candidate-' . bin2hex(random_bytes(6));
+    foreach (['candidate', 'installed'] as $name) {
+        $directory = $temporaryRoot . '/' . $name;
+        mkdir($directory . '/view', 0700, true);
+        mkdir($directory . '/docs', 0700);
+        file_put_contents($directory . '/registration.php', '<?php // fixture');
+        file_put_contents($directory . '/composer.json', '{}');
+        file_put_contents($directory . '/view/loader.js', '// reviewed loader');
+        file_put_contents($directory . '/docs/notes.md', $name);
+    }
+    $candidate = $temporaryRoot . '/candidate';
+    $installed = $temporaryRoot . '/installed';
+    $expectMismatch = static function (string $file) use ($candidate, $installed): void {
+        try {
+            basicrum_assert_installed_candidate($candidate, $installed);
+        } catch (RuntimeException $exception) {
+            basicrum_assert_contains($file, $exception->getMessage(), 'identify mismatched package file');
+            return;
+        }
+        throw new RuntimeException('Incorrect installed candidate was accepted.');
+    };
+    try {
+        basicrum_assert_installed_candidate($candidate, $candidate);
+        basicrum_assert_installed_candidate($candidate, $installed);
+        file_put_contents($installed . '/view/loader.js', '// stale loader');
+        $expectMismatch('view/loader.js');
+        unlink($installed . '/view/loader.js');
+        $expectMismatch('view/loader.js');
+        copy($candidate . '/view/loader.js', $installed . '/view/loader.js');
+        file_put_contents($installed . '/view/extra.js', '// unexpected asset');
+        $expectMismatch('view/extra.js');
+        unlink($installed . '/view/extra.js');
+        symlink($candidate . '/view/loader.js', $installed . '/view/extra.js');
+        $expectMismatch('view/extra.js');
+        unlink($installed . '/view/extra.js');
+        unlink($installed . '/registration.php');
+        $expectMismatch('registration.php');
+    } finally {
+        foreach (new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($temporaryRoot, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::CHILD_FIRST
+        ) as $file) {
+            $file->isDir() && !$file->isLink() ? rmdir($file->getPathname()) : unlink($file->getPathname());
+        }
         rmdir($temporaryRoot);
     }
 };

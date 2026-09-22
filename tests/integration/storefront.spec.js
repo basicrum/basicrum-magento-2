@@ -1,8 +1,18 @@
 const { test, expect } = require("./fixtures");
 const { requestParameters, siteId } = require("./beacons");
 const { expectStorefrontCsp } = require("./csp");
+const { expectFullPageCacheHit } = require("./cache");
 
 const storefrontUrl = process.env.MAGENTO_STOREFRONT_URL;
+
+function expectHomeBeacon(beacon) {
+  const parameters = requestParameters(beacon);
+  expect(parameters.get("p_type")).toBe("Home");
+  expect(parameters.get("p_gen")).toBe("mage2");
+  expect(parameters.get("brum_site_id")).toBe(siteId);
+  expect(parameters.get("u")).toContain("?qs-redacted");
+  expect(`${beacon.url()}${beacon.postData() || ""}`).not.toContain("must-not-leak");
+}
 
 test.skip(!storefrontUrl, "MAGENTO_STOREFRONT_URL is required");
 
@@ -42,6 +52,13 @@ test("rendered Magento storefront stays silent until allow and sends the expecte
   expect((await context.cookies(url.toString())).some((cookie) => ["RT", "BA"].includes(cookie.name))).toBe(false);
   expect(await page.locator('script[src*="consent-boomerang-loader-v1-15.min.js"]').count()).toBe(1);
 
+  // Warm the cookie/vary context established by the first anonymous visit.
+  // Routing disables browser HTTP caching; the final navigation below must hit server FPC.
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() => typeof window.OPT_IN_BASICRUM_LOADER_WRAPPER === "function");
+  expect(boomerangRequests).toBe(0);
+  expect(beacons).toHaveLength(0);
+
   await page.evaluate(() => {
     window.OPT_IN_BASICRUM_LOADER_WRAPPER();
     window.OPT_IN_BASICRUM_LOADER_WRAPPER();
@@ -49,25 +66,24 @@ test("rendered Magento storefront stays silent until allow and sends the expecte
   await expect.poll(() => beacons.length, { timeout: 15000 }).toBeGreaterThan(0);
   expect(boomerangRequests).toBe(1);
 
-  const parameters = requestParameters(beacons[0]);
-  expect(parameters.get("p_type")).toBe("Home");
-  expect(parameters.get("p_gen")).toBe("mage2");
-  expect(parameters.get("brum_site_id")).toBe(siteId);
-  expect(parameters.get("u")).toContain("?qs-redacted");
-  expect(`${beacons[0].url()}${beacons[0].postData() || ""}`).not.toContain("must-not-leak");
+  expectHomeBeacon(beacons[0]);
 
   await page.evaluate(() => window.OPT_OUT_BASICRUM_LOADER_WRAPPER());
   expect((await context.cookies(url.toString())).some((cookie) => ["RT", "BA"].includes(cookie.name))).toBe(false);
 
   const beaconsBeforeReload = beacons.length;
-  await page.reload({ waitUntil: "domcontentloaded" });
+  const cachedResponse = await page.reload({ waitUntil: "domcontentloaded" });
+  expectFullPageCacheHit(cachedResponse);
   await page.waitForFunction(() => typeof window.OPT_IN_BASICRUM_LOADER_WRAPPER === "function");
   await page.waitForTimeout(500);
   expect(beacons).toHaveLength(beaconsBeforeReload);
+  expect(boomerangRequests).toBe(1);
+  expect((await context.cookies(url.toString())).some((cookie) => ["RT", "BA"].includes(cookie.name))).toBe(false);
   expect(await page.locator('script[src*="consent-boomerang-loader-v1-15.min.js"]').count()).toBe(1);
 
   await page.evaluate(() => window.OPT_IN_BASICRUM_LOADER_WRAPPER());
   await expect.poll(() => beacons.length, { timeout: 15000 }).toBeGreaterThan(beaconsBeforeReload);
   expect(boomerangRequests).toBe(2);
+  expectHomeBeacon(beacons[beaconsBeforeReload]);
   expect(errors).toEqual([]);
 });
