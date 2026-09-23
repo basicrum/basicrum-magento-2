@@ -65,6 +65,8 @@ Notable changes to the Basicrum Analytics module are recorded here.
 
 ### Fixed
 
+- Fresh disposable Magento provisioning no longer writes the Admin Usage setting
+  after disabling its owning module. Configuration failures still stop the job.
 - Release ZIPs and expected hashes now come from committed files; ignored local
   files cannot enter the archive. Installed distributions reject extra development
   and hidden files. The cache-isolation test populates a fresh entry after consent.

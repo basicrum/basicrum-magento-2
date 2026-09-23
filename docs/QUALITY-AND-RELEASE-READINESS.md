@@ -132,6 +132,23 @@ The complete remote CI matrix and a new empty-volume provisioning run were not
 executed in this follow-up. The native run reused the dedicated disposable store.
 No source commit, push, release, deployment or license approval was made.
 
+## Fresh-provisioning CI correction — 2026-09-23
+
+The first [native CI run](https://github.com/basicrum/basicrum-magento-2/actions/runs/35846942665/job/107135254576)
+installed Magento successfully, then failed before installing Basicrum: the
+provisioning script wrote `admin/usage/enabled` after disabling the module that
+declares that field. Remove the redundant write, keeping Admin Analytics disabled
+and preserving fail-fast handling for real configuration errors.
+
+The new fast regression executes the actual provisioning script with CLI doubles;
+it checks both successful completion and failure propagation. All 46 fast checks
+and 18 focused PHP 8.3 groups pass. The actual `start.sh` bootstrap also completes
+on brand-new application/database volumes in the separate Compose project
+`basicrum-native-ci-fix-20260923`, including Nginx startup. Existing installation
+volumes are untouched. The local bootstrap log is retained at
+`.test-results/fresh-provision-ci-fix.log`; this is fresh-provisioning evidence,
+not a claim that a remote rerun has passed.
+
 ## Tested compatibility, not inferred compatibility
 
 | Combination | Evidence in this follow-up |

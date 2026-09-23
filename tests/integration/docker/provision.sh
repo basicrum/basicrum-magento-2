@@ -30,7 +30,7 @@ php bin/magento module:disable Magento_AdminAdobeImsTwoFactorAuth Magento_TwoFac
     PayPal_BraintreeCustomerBalance PayPal_BraintreeGiftCardAccount PayPal_BraintreeGiftWrapping
 php bin/magento deploy:mode:set developer
 php bin/magento config:set system/smtp/disable 1
-php bin/magento config:set admin/usage/enabled 0
+# Admin Analytics is already disabled; its admin/usage/enabled field no longer exists.
 php bin/magento config:set web/secure/use_in_frontend 1
 php bin/magento cache:enable
 echo 'Pinned disposable Magento is installed. Install the module artifact before running the gate.'
