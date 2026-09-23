@@ -35,4 +35,15 @@ function expectAdminCsp(headers) {
   }
 }
 
-module.exports = { expectAdminCsp, expectStorefrontCsp };
+function expectEnforcingScriptCsp(headers, nonce) {
+  const csp = headers["content-security-policy"];
+  expect(csp, "An enforcing header is required, not report-only").toBeTruthy();
+  expectStorefrontCsp(csp);
+  const sources = policySources(csp, "script-src");
+  expect(sources).not.toContain("'unsafe-inline'");
+  expect(typeof nonce).toBe("string");
+  expect(nonce.length).toBeGreaterThan(0);
+  expect(sources, "Magento's inline bootstrap nonce must match the header").toContain(`'nonce-${nonce}'`);
+}
+
+module.exports = { expectAdminCsp, expectStorefrontCsp, expectEnforcingScriptCsp };

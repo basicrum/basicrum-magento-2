@@ -56,6 +56,16 @@ it tests the documented manual package installation, not a published Packagist
 release. Every stale extra file, including in development directories, causes
 identity verification to fail, not silent deletion.
 
+The release gate also installs the separate, test-only `Basicrum_CspTest`
+module from `tests/integration/fixtures/Basicrum/CspTest` before upgrade and DI
+compilation. Its `/basicrumcsptest/` page uses Magento's normal layout, production
+Basicrum footer and assets, and route-specific enforcing CSP. It is excluded
+from the production archive with the rest of `tests/`; never install it on a
+live store. It does not modify vendor code, headers, or production assets.
+The installer refreshes known fixture files but fails on stale extras; inspect
+those files and remove them deliberately before retrying. It never deletes them
+automatically or enables a fixture that failed the content comparison.
+
 The `Pinned native Magento` CI workflow runs the same provision/archive/install/
 gate sequence on pull requests and manual dispatch. A workflow definition alone
 is not evidence that a remote run passed. The default fixture does not import
@@ -64,8 +74,20 @@ journey are explicitly skipped. See `docs/QUALITY-AND-RELEASE-READINESS.md` for
 the actual execution record and tested/untested matrix.
 
 Install this checkout as `app/code/Basicrum/Analytics` (module
-`Basicrum_Analytics`), enable it, run `setup:upgrade`, and make its storefront
-reachable before running this harness. Then:
+`Basicrum_Analytics`), enable it, and make its storefront reachable. For a
+standalone disposable installation, install the CSP fixture once (or refresh it
+after fixture changes), then run upgrade and DI compilation before the browser
+suite. The release gate above already performs these steps:
+
+```sh
+BASICRUM_DISPOSABLE_MAGENTO=1 \
+MAGENTO_ROOT=/absolute/path/to/disposable-magento \
+sh tests/integration/install-csp-fixture.sh
+/absolute/path/to/disposable-magento/bin/magento setup:upgrade
+/absolute/path/to/disposable-magento/bin/magento setup:di:compile
+```
+
+Then:
 
 ```sh
 npm ci
@@ -138,6 +160,26 @@ The CSP assertions require the baseline's enabled `Magento_Paypal` module:
 empty-cart `checkout/` request is inspected without following its redirect,
 so the check requires an actual enforcing `Content-Security-Policy` header,
 not the cart page's report-only header. This check creates no order.
+
+The mandatory `enforcing-csp.spec.js` tests render the isolated fixture page
+with a real enforcing header and `unsafe-inline` absent from `script-src`.
+They require the production inline bootstrap's DOM nonce to match that header,
+same-origin loader/Boomerang requests with verified bytes, pre-consent silence,
+single loading after repeated allow, intercepted beacon identity, withdrawal
+cookie cleanup, and no CSP violations or page errors. Two server-rendered visits
+must receive different matching nonces. A separate negative control appends an
+unnonced inline marker script: the browser must block it and report an enforcing
+violation. Test instrumentation only observes events and invokes the public
+consent callbacks outside this explicit negative control; it never rewrites
+headers, nonces, or production scripts.
+
+The fixture page is deliberately non-cacheable, like checkout; its response
+must be `no-store`, not an FPC HIT. This verifies enforcing-CSP execution and
+per-render nonce handling, not nonce behavior on cacheable pages. The existing
+report-only homepage cache-HIT/visitor-isolation checks remain unchanged. A
+cacheable enforcing-CSP deployment, custom nonce-only/strict-dynamic policies,
+and CDN/Varnish nonce handling require separate verification. Missing fixture
+installation fails the native tests rather than silently skipping them.
 
 Admin checks require at least one website/store view with single-store mode
 off and permission to view all three scopes. They verify that the collector

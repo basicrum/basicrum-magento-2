@@ -233,6 +233,13 @@ validation, and default/website/store inheritance inside rolled-back database
 transactions. Browser traffic is limited to the disposable storefront/Admin;
 the expected beacon is fulfilled locally and unexpected destinations fail the
 test. External payment scripts must be disabled in that test installation.
+The native suite also renders a test-only, non-cacheable Magento page under
+enforcing CSP with inline scripts disabled. It checks matching bootstrap
+nonces, real first-party script execution and consent-gated beacons, and a
+blocked unnonced inline negative control. The fixture is never packaged with
+the extension. This is separate from the report-only homepage FPC checks; it
+does not certify nonce handling on cacheable pages or custom strict-dynamic
+policies. See the integration README for fixture installation and scope.
 The regular CI workflow runs strict Composer 2.10 validation and optimized
 production classmap checks plus the fast PHP and Chromium checks. The Chromium
 job uploads an HTML report with traces from failed test attempts, retained for

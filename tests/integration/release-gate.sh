@@ -15,6 +15,8 @@ if [ -z "${MAGENTO_ROOT:-}" ] || [ ! -x "${MAGENTO_ROOT}/bin/magento" ]; then
     echo "MAGENTO_ROOT must point to a disposable Magento installation." >&2
     exit 1
 fi
+MAGENTO_ROOT=$(CDPATH= cd -- "$MAGENTO_ROOT" && pwd)
+export MAGENTO_ROOT
 
 if [ -z "${MAGENTO_STOREFRONT_URL:-}" ]; then
     echo "MAGENTO_STOREFRONT_URL is required." >&2
@@ -41,6 +43,7 @@ php "$module_root/tests/integration/check-installed-candidate.php"
 
 cd "$MAGENTO_ROOT"
 php "$module_root/tests/integration/check-baseline.php"
+sh "$module_root/tests/integration/install-csp-fixture.sh"
 "$magento" setup:upgrade
 "$magento" setup:di:compile
 "$magento" setup:static-content:deploy -f en_US

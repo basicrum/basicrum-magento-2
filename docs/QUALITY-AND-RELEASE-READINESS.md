@@ -149,6 +149,59 @@ volumes are untouched. The local bootstrap log is retained at
 `.test-results/fresh-provision-ci-fix.log`; this is fresh-provisioning evidence,
 not a claim that a remote rerun has passed.
 
+## Enforcing CSP script execution — 2026-09-23
+
+Adds the missing native execution coverage alongside the earlier checkout-302
+header assertion. A separate `Basicrum_CspTest` fixture module supplies a native,
+non-cacheable page with route-specific enforcing CSP and inline scripts disabled.
+The release gate installs this fixture before upgrade/DI compilation. It is
+development-only, excluded from production archives and optimized classmaps.
+Production PHP, templates, loaders, configuration and CSP code are unchanged.
+
+The browser requires a real enforcing header, a matching production-bootstrap
+nonce, fresh nonces on two server renders, same-origin loader/Boomerang requests
+with verified bytes, consent silence, single loading, intercepted beacon identity
+and withdrawal cookie cleanup. No CSP violations or page errors are accepted
+in the positive case. A separate unnonced inline marker must be blocked with an
+enforcing violation; this detects accidentally bypassed browser CSP. No response
+headers, production assets or nonces are rewritten by the harness.
+
+Opus 5.5 was consulted through the local Claude CLI, with the returned model
+identity confirmed as `claude-opus-5-5`. Its patch review found no blocking
+issues. Follow-ups add fail-closed detection of stale fixture files without
+deleting them, canonicalize the release gate's installation root before changing
+directories, and accept both script CSP directive names in the negative control.
+A fast installer regression covers guarded installation, relative roots, refresh
+and stale-file rejection. A separate design review suggested enforcing CSP on
+the native cart instead; the isolated fixture keeps normal storefront/checkout
+policies unchanged and makes the test-only scope explicit.
+
+Checks actually run locally:
+
+- Fast Chromium/helper suite: 48 pass; packaged minification matches.
+- Focused PHP 8.3: 18 groups pass. Native configuration saves: 10 groups pass.
+- Native Magento 2.4.7-p10/PHP 8.3: upgrade, DI compilation and static deployment
+  pass; full browser suite: 21 pass, 4 existing explicit skips (sample-data routes
+  and order-creating checkout). Both new CSP tests run, without retries.
+- Strict optimized production classmap: 13 classes, no test fixture classes.
+- Fixture installer rejects a missing disposable guard, Magento root or stale
+  extra files, without deleting extras or enabling a rejected fixture.
+- Full archive/install/native release gate passes against isolated local test
+  snapshot `1699b5b44ee0ded40d036a829f1643d4bae1a790`, not a working-branch commit
+  or release tag. ZIP: 34 production files, SHA-256
+  `f1d157dc62c5f45ee60c1226581ae0ae35c93f8820bf8cb6d736a04d5dbc9eb8`.
+  Log: `.test-results/csp-native-gate.log`. Four archive-corruption checks pass.
+  This rerun includes the Opus follow-ups and exercises a relative `MAGENTO_ROOT`.
+- PHP/JavaScript and shell syntax checks and `git diff --check` pass.
+
+The enforcing fixture deliberately requires `no-store`, like checkout. Existing
+report-only homepage FPC/HIT and two-visitor checks remain unchanged. This run
+does not certify nonce handling on cacheable enforcing pages, Varnish/CDN caches,
+custom strict-dynamic policies, or a complete checkout/payment journey. Remote
+CI has not run for these uncommitted changes. This run reused the dedicated
+disposable installation; it did not reprovision fresh volumes. No release or
+push was performed.
+
 ## Tested compatibility, not inferred compatibility
 
 | Combination | Evidence in this follow-up |
