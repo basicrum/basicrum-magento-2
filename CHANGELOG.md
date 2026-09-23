@@ -78,6 +78,8 @@ Notable changes to Basicrum Analytics are recorded here.
   before selecting the exact settings link, which is hidden when collapsed.
 - Validate rename branches through Composer's validating VCS importer in CI,
   including the pre-merge old-name default branch that root validation misses.
+- Rebuild the disposable Magento catalog search index before native browser
+  checks, including when retained application/database volumes outlive OpenSearch data.
 - Fresh disposable Magento provisioning no longer writes the Admin Usage setting
   after disabling its owning module. Configuration failures still stop the job.
 - Release ZIPs and expected hashes now come from committed files; ignored local

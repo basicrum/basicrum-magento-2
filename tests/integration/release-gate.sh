@@ -47,6 +47,9 @@ sh "$module_root/tests/integration/install-csp-fixture.sh"
 "$magento" setup:upgrade
 "$magento" setup:di:compile
 "$magento" setup:static-content:deploy -f en_US
+# Reused disposable stacks may retain the database but lose OpenSearch data.
+# No cron runs here, and setup:upgrade can invalidate scheduled indexers.
+"$magento" indexer:reindex catalogsearch_fulltext
 php "$module_root/tests/integration/config-save.php"
 
 cd "$module_root"

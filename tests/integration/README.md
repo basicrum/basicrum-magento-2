@@ -32,6 +32,9 @@ For subsequent runs after `down`, first recreate the containers with
 `docker compose -f tests/integration/docker/compose.yaml up -d`.
 Application/database volumes are retained; do not reprovision them. Git's
 `safe.directory` is baked into the PHP image and survives container recreation.
+OpenSearch data is not persisted by this test stack. The release gate rebuilds
+`catalogsearch_fulltext` through Magento's standard indexer before browser checks,
+so a reused installation does not depend on an old search index or background cron.
 After harness Dockerfile changes, run `docker compose -f tests/integration/docker/compose.yaml build php`
 before `up -d`. First-time `start.sh` installs npm dependencies using the caller's
 UID/GID so the bind-mounted checkout does not acquire root-owned `node_modules`.
