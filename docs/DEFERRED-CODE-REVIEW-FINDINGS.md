@@ -29,6 +29,10 @@ Execution results and baseline limitations are recorded in
 
 **Status:** Deferred.
 
+The 2026-09-23 [CSP/caching adoption notes](CSP-CACHING-ADOPTION-NOTES.md)
+record the Opus/Grok consultation, native-core source findings and selected
+test-first priorities. They do not implement or resolve this finding.
+
 The cacheable footer embeds the effective endpoint, Brum Site ID, consent
 choice, query-redaction flag, and wait configuration. The module's backend
 models validate saved values but do not explicitly invalidate Magento
