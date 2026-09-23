@@ -166,9 +166,10 @@ Review the following before enabling the upgraded module:
 
 - The Composer package name changes from `basicrum/basicrum-analytics` to
   `basicrum/basicrum-magento-2`. The two packages must not be installed together;
-  Composer rejects that combination. Change the project requirement explicitly
-  when the new release is available; this is not an automatic or
-  backward-compatible replacement. A manual `app/code` copy must not coexist
+  Composer does not prevent that combination during the naming transition.
+  Remove the old requirement and check the resolved lock file for old-name
+  transitive dependencies when the new release is available; this is not an
+  automatic or backward-compatible replacement. A manual `app/code` copy must not coexist
   with a Composer installation either. No stored configuration is deleted.
 
 - Magento 2 `p_type` labels now match Magento 1, including capitalization and
@@ -256,8 +257,18 @@ blocked unnonced inline negative control. The fixture is never packaged with
 the extension. This is separate from the report-only homepage FPC checks; it
 does not certify nonce handling on cacheable pages or custom strict-dynamic
 policies. See the integration README for fixture installation and scope.
-The regular CI workflow runs strict Composer 2.10 validation and optimized
-production classmap checks plus the fast PHP and Chromium checks. The Chromium
+The regular CI workflow runs strict Composer 2.10 validation, a validating VCS
+import regression before and after the default-branch rename, and optimized
+production classmap checks plus the fast PHP and Chromium checks. The VCS test
+uses the real Composer importer on a temporary local Git repository containing
+the candidate metadata and a synthetic historical tag; it needs no network or
+Packagist account. Run it with:
+
+```sh
+docker run --rm --network none -v "$PWD:/app:ro" -w /app composer:2.10 php tests/php/check-composer-import.php /usr/bin/composer
+```
+
+This is not a live Packagist update or a Magento Composer installation. The Chromium
 job uploads an HTML report with traces from failed test attempts, retained for
 seven days. A flaky pass still fails the job; retries do not hide failures.
 Additional CI checks run Magento-aware PHPStan level 8 and Magento coding

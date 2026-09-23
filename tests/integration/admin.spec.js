@@ -34,12 +34,25 @@ test("Basicrum configuration renders in Magento Admin", async ({ page }) => {
   expect(configurationUrl).toBeTruthy();
   await page.goto(configurationUrl, { waitUntil: "domcontentloaded" });
 
-  const basicrumSection = page
-    .locator("#system_config_tabs")
-    .getByRole("link", { name: "Basicrum Analytics", exact: true });
-  const basicrumUrl = await basicrumSection.getAttribute("href");
-  expect(basicrumUrl).toBeTruthy();
-  const response = await page.goto(basicrumUrl, { waitUntil: "networkidle" });
+  const configTabs = page.locator("#system_config_tabs");
+  // Magento initializes this group as a collapsible. Hidden links are not
+  // accessible by role until the group is opened through its native control.
+  // The tab's accessible name also contains Magento's expand/collapse icon.
+  const basicrumTab = configTabs.getByRole("tab").filter({
+    has: page.getByText("Basicrum", { exact: true })
+  });
+  await expect(basicrumTab).toBeVisible();
+  if ((await basicrumTab.getAttribute("aria-expanded")) !== "true") {
+    await basicrumTab.click();
+  }
+  await expect(basicrumTab).toHaveAttribute("aria-expanded", "true");
+  const basicrumSection = configTabs.getByRole("link", { name: "Basicrum Analytics", exact: true });
+  await expect(basicrumSection).toBeVisible();
+  const [response] = await Promise.all([
+    page.waitForNavigation({ waitUntil: "networkidle" }),
+    basicrumSection.click()
+  ]);
+  expect(response).toBeTruthy();
   expectAdminCsp(response.headers());
 
   const generalSettings = page.locator('a[href="#basicrum_general-link"]');

@@ -19,6 +19,9 @@ jobs:
       - name: Validate Composer metadata strictly
         run: docker run --rm -v "$GITHUB_WORKSPACE:/app" -w /app composer:2.10 validate --strict
 
+      - name: Validate VCS imports before and after the package rename
+        run: docker run --rm --network none -v "$GITHUB_WORKSPACE:/app:ro" -w /app composer:2.10 php tests/php/check-composer-import.php /usr/bin/composer
+
       - name: Check optimized production classmap
         run: |
           docker run --rm -v "$GITHUB_WORKSPACE:/app" -w /app composer:2.10 dump-autoload --optimize --strict-psr --no-dev --no-scripts --no-plugins --no-interaction

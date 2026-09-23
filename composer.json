@@ -21,9 +21,6 @@
         "magento/module-csp": "^100.4",
         "magento/module-store": "^101.1"
     },
-    "conflict": {
-        "basicrum/basicrum-analytics": "*"
-    },
     "archive": {
         "exclude": [
             "/.github", "/.gitignore", "/.gitattributes", "/.test-results",

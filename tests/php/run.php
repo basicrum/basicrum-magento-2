@@ -225,11 +225,6 @@ $tests['technical identity and direct Magento dependencies are declared consiste
     );
     basicrum_assert_same('basicrum/basicrum-magento-2', $composer['name'], 'canonical Composer package name');
     basicrum_assert_same('magento2-module', $composer['type'], 'Magento package type');
-    basicrum_assert_same(
-        ['basicrum/basicrum-analytics' => '*'],
-        $composer['conflict'] ?? [],
-        'old and new Composer packages cannot be installed together'
-    );
     foreach (['replace', 'provide'] as $alias) {
         basicrum_assert_false(isset($composer[$alias]), 'no backward-compatible Composer alias: ' . $alias);
     }

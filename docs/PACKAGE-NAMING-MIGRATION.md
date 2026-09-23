@@ -21,8 +21,21 @@ declaration and third-party notices are preserved.
 
 ## Composer decision
 
-The new package declares `conflict: {"basicrum/basicrum-analytics": "*"}`.
-Both packages must not be installed together. There is no `replace`, `provide`,
+The rename does not declare a conflict with `basicrum/basicrum-analytics`.
+While `main` still uses that old name, Composer's VCS importer assigns it to
+the rename branch too. An old-name conflict then becomes a self-conflict and
+Packagist rejects the branch, even though standalone `composer validate` passes.
+The initial PR declared that conflict; the Packagist update failure exposed this
+import-stage gap. CI now exercises Composer's validating VCS importer with both
+old-name and new-name default branches, the real candidate metadata, and a
+synthetic historical tag in a disposable local Git repository.
+
+Both packages must not be installed together, but **Composer does not enforce
+that restriction during this transition**. Remove the old requirement explicitly
+and inspect the resolved lock file for transitive old-name dependencies.
+Any later conflict declaration requires a separately verified migration step,
+including successful imports for the affected Packagist listings; it is not
+automatically safe merely because this PR was merged. There is no `replace`, `provide`,
 compatibility metapackage, class alias or automatic upgrade: this is an
 intentional package-name break, not a promise to satisfy old dependencies.
 Composer cannot detect a duplicate manually installed `app/code` copy.
@@ -38,6 +51,10 @@ Do not present `dev-main` or an imported `0.0.x` tag as the new stable release.
 
 1. Merge the naming change into the repository's default branch, `main`.
    A feature branch alone does not establish the new Packagist identity.
+   After the corrected branch is pushed, verify that the old listing's next
+   update no longer rejects it for a self-conflict. If the hook has not retried,
+   an authorized maintainer can trigger an update. Repeat the import check after
+   merging; a local test does not certify the hosted updater's state.
 2. Before publishing `0.1.0`, obtain the owner's approval for the missing root
    LICENSE text and run the release gate against the exact clean commit to be
    tagged. CI success is not license approval. Keep the Composer `version`
@@ -73,7 +90,8 @@ composer require 'basicrum/basicrum-magento-2:^0.1'
 
 Back up and review the resulting `composer.json` / `composer.lock` diff. If a
 different package still requires the old name, stop and update that dependency
-deliberately; do not bypass the conflict. This transaction only changes Composer
+deliberately. Do not deploy a lock file containing both names; there is no
+solver-level conflict guard in this rename. This transaction only changes Composer
 packages. It does not migrate the historical module-name capitalization,
 Magento's enabled-module configuration, or third-party customizations. Review
 the README's upgrade notes and Magento deployment steps. Remove any duplicate
@@ -83,15 +101,17 @@ stored settings, and rebuild compiled DI/static assets and caches as documented.
 ## Review and sources
 
 CLI consultations used `grok-4.7` at high reasoning effort (reported
-`grok-4.7-build`) and `claude-opus-5-5` at maximum effort. Both recommended an explicit conflict
-without `replace` / `provide`. Opus also identified the old-tag install trap
+`grok-4.7-build`) and `claude-opus-5-5` at maximum effort. Both initially recommended an explicit
+conflict without `replace` / `provide`. We removed that conflict
+after the Packagist failure and a local reproduction using Composer's validating
+VCS importer; the no-alias decision remains. Opus also identified the old-tag install trap
 and recommended publishing the new stable tag before submitting the listing.
 An initial Grok claim that old tags stay confined to the old name was corrected
 against Composer source. A fixed `support.source` URL is deliberately omitted:
 Composer's GitHub driver supplies a version-specific source link instead.
 Tests guard package identity and dependency semantics; the native Admin test
-checks the exact rendered section name and logo caption rather than adding a
-repository-wide branding scan.
+opens Magento's native collapsible navigation before checking the exact rendered
+section name and logo caption rather than adding a repository-wide branding scan.
 
 - [Packagist maintainer rename procedure](https://github.com/composer/packagist/issues/47)
 - [Composer conflict semantics](https://getcomposer.org/doc/04-schema.md#conflict)
