@@ -36,7 +36,7 @@ test("Basicrum configuration renders in Magento Admin", async ({ page }) => {
 
   const basicrumSection = page
     .locator("#system_config_tabs")
-    .getByRole("link", { name: "Basicrum for Magento 2", exact: true });
+    .getByRole("link", { name: "Basicrum Analytics", exact: true });
   const basicrumUrl = await basicrumSection.getAttribute("href");
   expect(basicrumUrl).toBeTruthy();
   const response = await page.goto(basicrumUrl, { waitUntil: "networkidle" });
@@ -52,7 +52,7 @@ test("Basicrum configuration renders in Magento Admin", async ({ page }) => {
       return logo.isVisible();
     })
     .toBe(true);
-  await expect(logo.locator("span")).toHaveText("Basicrum for Magento 2");
+  await expect(logo.locator("span")).toHaveText("Basicrum Analytics");
   await expect(page.getByText("Monitoring Status", { exact: true })).toBeVisible();
   await expect(page.getByText("Beacon Endpoint", { exact: true })).toBeVisible();
   await expect(page.getByText("Brum Site ID", { exact: true })).toBeVisible();

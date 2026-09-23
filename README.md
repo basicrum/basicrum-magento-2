@@ -1,4 +1,4 @@
-# Basicrum for Magento 2
+# Basicrum Analytics
 
 Basicrum adds Boomerang real user monitoring (RUM) to a Magento 2 storefront.
 Monitoring is fail-closed: no Basicrum storefront scripts are emitted unless
@@ -62,7 +62,7 @@ static content using the store's normal deployment process as well.
 
 ## Configuration
 
-Open **Stores > Configuration > Basicrum > Basicrum for Magento 2**. Every setting supports
+Open **Stores > Configuration > Basicrum > Basicrum Analytics**. Every setting supports
 Magento default, website, and store inheritance. Display-only status, version,
 and callback instructions have no inheritance controls or stored values.
 Visitor Consent and Privacy open expanded each time you visit the page. You

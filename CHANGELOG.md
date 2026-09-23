@@ -1,6 +1,6 @@
 # Changelog
 
-Notable changes to Basicrum for Magento 2 are recorded here.
+Notable changes to Basicrum Analytics are recorded here.
 
 ## [Unreleased]
 
@@ -29,7 +29,7 @@ Notable changes to Basicrum for Magento 2 are recorded here.
 ### Changed
 
 - **Breaking packaging change:** the Composer name is now
-  `basicrum/basicrum-magento-2`, with the public title "Basicrum for Magento 2"
+  `basicrum/basicrum-magento-2`, retaining the public title "Basicrum Analytics"
   and distribution filename `basicrum-magento-2.zip`. The old Composer name
   conflicts with the new package; no compatibility replacement is declared.
   Magento module/namespace/ACL identifiers and configuration paths are unchanged

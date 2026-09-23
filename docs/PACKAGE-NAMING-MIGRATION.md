@@ -8,7 +8,7 @@ delete any Packagist package, create a release tag, or approve a module license.
 | Surface | Canonical value |
 | --- | --- |
 | Composer / Packagist | `basicrum/basicrum-magento-2` |
-| Public title and Admin section | Basicrum for Magento 2 |
+| Public title and Admin section | Basicrum Analytics |
 | Description | Basicrum real user monitoring (RUM) for Magento 2 |
 | Distribution ZIP | `basicrum-magento-2.zip` |
 | Magento module (unchanged) | `Basicrum_Analytics` |
