@@ -13,6 +13,8 @@ use Magento\Framework\Exception\LocalizedException;
 class BrumSiteId extends Value
 {
     /**
+     * Reject invalid site identities while allowing an inactive empty setting.
+     *
      * @throws LocalizedException
      */
     public function beforeSave()

@@ -20,6 +20,18 @@ use Magento\Store\Model\StoreManagerInterface;
  */
 class BeaconEndpoint extends Value
 {
+    /**
+     * Initialize the scoped native configuration backend.
+     *
+     * @param Context $context
+     * @param Registry $registry
+     * @param ScopeConfigInterface $config
+     * @param TypeListInterface $cacheTypeList
+     * @param StoreManagerInterface $storeManager
+     * @param AbstractResource|null $resource
+     * @param AbstractDb|null $resourceCollection
+     * @param array<string,mixed> $data
+     */
     public function __construct(
         Context $context,
         Registry $registry,
@@ -42,6 +54,8 @@ class BeaconEndpoint extends Value
     }
 
     /**
+     * Validate the endpoint and apply the effective HTTP policy before saving.
+     *
      * @throws LocalizedException
      */
     public function beforeSave()
@@ -76,7 +90,8 @@ class BeaconEndpoint extends Value
 
         if ($scope === ScopeInterface::SCOPE_STORES && $scopeCode !== '') {
             if (is_array($field) && !empty($field['inherit'])) {
-                $websiteCode = (string) $this->storeManager->getStore($scopeCode)->getWebsite()->getCode();
+                $websiteId = $this->storeManager->getStore($scopeCode)->getWebsiteId();
+                $websiteCode = (string) $this->storeManager->getWebsite($websiteId)->getCode();
                 return Config::normalizeBoolean(
                     $this->_config->getValue(
                         Config::XML_PATH_DEVELOPMENT_MODE,

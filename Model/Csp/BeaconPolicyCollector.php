@@ -17,6 +17,12 @@ class BeaconPolicyCollector implements PolicyCollectorInterface
 {
     private const DIRECTIVES = ['connect-src', 'img-src'];
 
+    /**
+     * Initialize the storefront-only policy collector.
+     *
+     * @param Config $config
+     * @param State $appState
+     */
     public function __construct(
         private Config $config,
         private State $appState
@@ -56,8 +62,15 @@ class BeaconPolicyCollector implements PolicyCollectorInterface
         return $defaultPolicies;
     }
 
+    /**
+     * Extract a fetch-policy origin from the validated effective endpoint.
+     *
+     * @param string $endpoint
+     */
     private function getOrigin(string $endpoint): ?string
     {
+        // Use the same native URL parser as Config's endpoint validation.
+        // phpcs:ignore Magento2.Functions.DiscouragedFunction.Discouraged
         $parts = parse_url($endpoint);
         if (!is_array($parts) || empty($parts['scheme']) || empty($parts['host'])) {
             return null;

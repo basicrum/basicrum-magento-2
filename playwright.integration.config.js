@@ -5,6 +5,7 @@ module.exports = defineConfig({
   testMatch: "*.spec.js",
   timeout: 30000,
   fullyParallel: false,
+  workers: 1,
   forbidOnly: true,
   retries: 0,
   reporter: "line",

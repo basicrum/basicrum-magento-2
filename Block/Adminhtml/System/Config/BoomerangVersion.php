@@ -8,6 +8,9 @@ use Magento\Framework\Data\Form\Element\AbstractElement;
 
 class BoomerangVersion extends ReadOnlyField
 {
+    /**
+     * @inheritDoc
+     */
     protected function _getElementHtml(AbstractElement $element): string
     {
         return (string) $this->escapeHtml(sprintf(

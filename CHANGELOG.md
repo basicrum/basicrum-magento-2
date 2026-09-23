@@ -6,6 +6,11 @@ Notable changes to the Basicrum Analytics module are recorded here.
 
 ### Added
 
+- Magento-aware PHPStan level 8, Magento coding standards, precise runtime
+  configuration types, and lowest/stable component-dependency CI checks.
+- Magento-version/image-pinned Mage-OS-mirror native test stack, production ZIP verification,
+  storefront/FPM installation binding, served-asset hashing, and two-visitor FPC
+  consent isolation tests. Development tooling is excluded from distribution.
 - Fail-closed required Beacon Endpoint and UUIDv4 Brum Site ID configuration,
   scoped validation, and Admin monitoring status.
 - Manual consent-controlled loading with the public opt-in and opt-out
@@ -60,6 +65,14 @@ Notable changes to the Basicrum Analytics module are recorded here.
 
 ### Fixed
 
+- Release ZIPs and expected hashes now come from committed files; ignored local
+  files cannot enter the archive. Installed distributions reject extra development
+  and hidden files. The cache-isolation test populates a fresh entry after consent.
+- Persist the disposable stack's Git trust configuration across container recreation
+  and install npm dependencies as the host user. Document unlocked application
+  dependencies and the actual static-analysis component/PHP requirements.
+- Resolve store-to-website inheritance through public `StoreInterface` and
+  store-manager APIs, without relying on concrete store-model methods.
 - Browser integration checks now intercept at context scope and restrict
   transport to the disposable store, including redirects. Unexpected traffic
   fails the test; collectors are never added to the proxy allowlist.
@@ -89,7 +102,7 @@ Notable changes to the Basicrum Analytics module are recorded here.
 - There is no configuration data migration. Existing enabled stores remain
   inactive until the new required Brum Site ID is valid.
 - Automatic consent-provider adapters, full-page-cache invalidation analysis,
-  a broad optimizer matrix, installable package/release publishing, and the
+  a broad optimizer matrix, release publishing, and the
   central parity ledger's D-002 through D-004 items remain deferred. D-001's
   Magento 2-to-Magento 1 label alignment is now implemented; a shared
   cross-platform taxonomy and historical reporting migration remain deferred.

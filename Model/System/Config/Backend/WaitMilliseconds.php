@@ -11,6 +11,9 @@ use Magento\Framework\App\Config\Value;
  */
 class WaitMilliseconds extends Value
 {
+    /**
+     * @inheritDoc
+     */
     public function beforeSave()
     {
         $this->setValue(Config::normalizeWaitMilliseconds($this->getValue()));

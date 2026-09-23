@@ -15,4 +15,4 @@ if (!$installedRoot || !is_dir($installedRoot)) {
     throw new RuntimeException('Basicrum_Analytics is not registered in this Magento installation.');
 }
 basicrum_assert_installed_candidate(dirname(__DIR__, 2), realpath($installedRoot));
-echo 'PASS: registered Basicrum package files match the candidate checkout.' . PHP_EOL;
+echo 'PASS: registered Basicrum installation exactly matches the committed production files.' . PHP_EOL;

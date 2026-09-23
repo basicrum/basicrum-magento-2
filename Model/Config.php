@@ -8,6 +8,9 @@ use Magento\Store\Model\ScopeInterface;
 
 /**
  * Reads and validates the effective Basicrum configuration for a store scope.
+ *
+ * @phpstan-type RuntimeConfig array{beacon_endpoint: string, brum_site_id: string,
+ *     consent_enabled: bool, strip_query_string: bool, wait_after_onload: bool, delay_ms: int}
  */
 class Config
 {
@@ -26,6 +29,11 @@ class Config
     private const BRUM_SITE_ID_PATTERN =
         '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i';
 
+    /**
+     * Initialize the scope-aware configuration reader.
+     *
+     * @param ScopeConfigInterface $scopeConfig
+     */
     public function __construct(
         private ScopeConfigInterface $scopeConfig
     ) {
@@ -34,8 +42,9 @@ class Config
     /**
      * Return a complete, validated runtime configuration or null when inactive.
      *
+     * @param string $scopeType
      * @param string|int|null $scopeCode
-     * @return array<string, bool|int|string>|null
+     * @return RuntimeConfig|null
      */
     public function getRuntimeConfig(
         string $scopeType = ScopeInterface::SCOPE_STORE,
@@ -75,6 +84,7 @@ class Config
     /**
      * Describe why the effective scope is active or inactive for admin feedback.
      *
+     * @param string $scopeType
      * @param string|int|null $scopeCode
      */
     public function getStatus(
@@ -113,8 +123,10 @@ class Config
 
     /**
      * Validate a collector URL without accepting executable URL schemes.
+     *
+     * @param mixed $value
      */
-    public static function isValidBeaconEndpoint($value): bool
+    public static function isValidBeaconEndpoint(mixed $value): bool
     {
         if (!is_string($value) || $value === '' || trim($value) !== $value) {
             return false;
@@ -124,6 +136,8 @@ class Config
             return false;
         }
 
+        // Native parsing deliberately matches validation and the CSP origin parser.
+        // phpcs:ignore Magento2.Functions.DiscouragedFunction.Discouraged
         $parts = parse_url($value);
         if (!is_array($parts) || empty($parts['scheme']) || empty($parts['host'])) {
             return false;
@@ -144,16 +158,21 @@ class Config
 
     /**
      * Validate a Brum Site ID as an RFC 4122 UUIDv4.
+     *
+     * @param mixed $value
      */
-    public static function isValidBrumSiteId($value): bool
+    public static function isValidBrumSiteId(mixed $value): bool
     {
         return is_string($value) && preg_match(self::BRUM_SITE_ID_PATTERN, $value) === 1;
     }
 
     /**
      * Normalize only explicit boolean values. Unknown values fail to the caller's default.
+     *
+     * @param mixed $value
+     * @param bool $default
      */
-    public static function normalizeBoolean($value, bool $default): bool
+    public static function normalizeBoolean(mixed $value, bool $default): bool
     {
         if ($value === true || $value === 1 || $value === '1') {
             return true;
@@ -168,8 +187,10 @@ class Config
 
     /**
      * Clamp a configured delay to the supported zero-to-30-second range.
+     *
+     * @param mixed $value
      */
-    public static function normalizeWaitMilliseconds($value): int
+    public static function normalizeWaitMilliseconds(mixed $value): int
     {
         if (!is_scalar($value) || !is_numeric($value)) {
             return 0;
@@ -179,6 +200,10 @@ class Config
     }
 
     /**
+     * Read a trimmed scoped string.
+     *
+     * @param string $path
+     * @param string $scopeType
      * @param string|int|null $scopeCode
      */
     private function getString(string $path, string $scopeType, $scopeCode): string
@@ -188,6 +213,9 @@ class Config
 
     /**
      * Apply the same HTTPS policy at save time and runtime after validation.
+     *
+     * @param string $endpoint
+     * @param bool $httpAllowed
      */
     public static function normalizeBeaconEndpoint(string $endpoint, bool $httpAllowed): string
     {
@@ -197,6 +225,11 @@ class Config
     }
 
     /**
+     * Read an explicitly supported boolean, or the caller's safe default.
+     *
+     * @param string $path
+     * @param bool $default
+     * @param string $scopeType
      * @param string|int|null $scopeCode
      */
     private function getBoolean(

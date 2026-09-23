@@ -35,6 +35,8 @@ module_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 magento="${MAGENTO_ROOT}/bin/magento"
 candidate_commit=$(sh "$module_root/tests/integration/check-candidate.sh")
 echo "Checking Basicrum candidate ${candidate_commit} for ${BASICRUM_RELEASE_TAG}."
+artifact=${BASICRUM_ARTIFACT:-$module_root/.test-results/package/basicrum-analytics.zip}
+php "$module_root/tests/integration/check-artifact.php" "$artifact"
 php "$module_root/tests/integration/check-installed-candidate.php"
 
 cd "$MAGENTO_ROOT"
@@ -54,4 +56,5 @@ if [ "$final_commit" != "$candidate_commit" ]; then
     exit 1
 fi
 php "$module_root/tests/integration/check-installed-candidate.php"
+php "$module_root/tests/integration/check-artifact.php" "$artifact"
 echo "PASS: release gate for ${BASICRUM_RELEASE_TAG}, candidate commit ${candidate_commit}."

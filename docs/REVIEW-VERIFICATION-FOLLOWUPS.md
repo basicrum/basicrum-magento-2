@@ -1,5 +1,9 @@
 # Joint-review verification follow-ups
 
+Later execution evidence and the resolved package/native-stack gaps are recorded
+in [QUALITY-AND-RELEASE-READINESS.md](QUALITY-AND-RELEASE-READINESS.md). The results
+below remain the historical 2026-09-22 record, not the current verification state.
+
 Implemented locally on 2026-09-22 after the Codex, Opus 5.5 Max, and focused
 Grok review. These notes are for the central parity task; the shared ledger
 and reference plugins were not changed.

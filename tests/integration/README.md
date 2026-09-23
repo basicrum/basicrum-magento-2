@@ -6,6 +6,63 @@ Adobe's current system-requirements table lists PHP 8.2 and 8.3 for the 2.4.7
 release line. This is a baseline, not a claim that every patch or platform
 combination has been verified.
 
+## Magento-version/image-pinned local/CI stack
+
+`sh tests/integration/docker/start.sh` creates the dedicated Compose project
+`basicrum-release-baseline` using pinned image digests and the anonymous Mage-OS
+mirror. It provisions exactly 2.4.7-p10, installs the pinned Playwright runner,
+and leaves existing Magento stacks alone. Docker, Compose, OpenSSL and several
+GB of disk/RAM are required. Provisioning refuses to overwrite an installed
+application; reuse it with the commands below, not `start.sh` again.
+The full Magento Composer dependency closure is **not** locked in this repository.
+Fresh provisioning resolves transitive dependencies from the mirror; upstream
+releases/advisories can change that resolution or make installation fail. Image
+digests and the Magento version pin do not promise bit-for-bit reproducibility.
+
+The test browser runs inside the PHP container at `https://web:8443/`; the host
+binding is loopback-only port **9443**, never 443 or the existing local shop's
+8443. This is a test appliance, not a replacement developer shop. Database and
+search ports are not published. Its checked-in credentials are synthetic and
+must never be reused elsewhere. Admin 2FA, Admin analytics, Braintree extensions
+and outbound SMTP are disabled **only in this disposable installation**.
+`Magento_Paypal` stays enabled for the core CSP regression assertion. No browser
+allowlist exception is made for Braintree or any other external service.
+
+For subsequent runs after `down`, first recreate the containers with
+`docker compose -f tests/integration/docker/compose.yaml up -d`.
+Application/database volumes are retained; do not reprovision them. Git's
+`safe.directory` is baked into the PHP image and survives container recreation.
+After harness Dockerfile changes, run `docker compose -f tests/integration/docker/compose.yaml build php`
+before `up -d`. First-time `start.sh` installs npm dependencies using the caller's
+UID/GID so the bind-mounted checkout does not acquire root-owned `node_modules`.
+To refresh dependencies later, run `npm ci` as the host user, or use the same
+UID/GID-aware `exec` command from `start.sh`. Existing root-owned dependencies
+from older harness runs need their ownership repaired before this unprivileged install.
+
+From a clean committed checkout with the containers running:
+
+```sh
+docker compose -f tests/integration/docker/compose.yaml exec -T -w /module php sh tests/integration/build-artifact.sh
+docker compose -f tests/integration/docker/compose.yaml exec -T -w /module php php tests/integration/test-artifact.php
+docker compose -f tests/integration/docker/compose.yaml exec -T php sh /module/tests/integration/docker/install-artifact.sh
+docker compose -f tests/integration/docker/compose.yaml exec -T -w /module -e BASICRUM_RELEASE_TAG=0.1.0 php sh tests/integration/release-gate.sh
+docker compose -f tests/integration/docker/compose.yaml down
+```
+
+`down` stops/removes this stack's containers/network but retains its database
+and application volumes. It does not stop other projects or remove their data.
+The installer expands the verified Git-commit ZIP at `app/code/Basicrum/Analytics`;
+it tests the documented manual package installation, not a published Packagist
+release. Every stale extra file, including in development directories, causes
+identity verification to fail, not silent deletion.
+
+The `Pinned native Magento` CI workflow runs the same provision/archive/install/
+gate sequence on pull requests and manual dispatch. A workflow definition alone
+is not evidence that a remote run passed. The default fixture does not import
+sample data or create orders: three sample routes and the opt-in checkout
+journey are explicitly skipped. See `docs/QUALITY-AND-RELEASE-READINESS.md` for
+the actual execution record and tested/untested matrix.
+
 Install this checkout as `app/code/Basicrum/Analytics` (module
 `Basicrum_Analytics`), enable it, run `setup:upgrade`, and make its storefront
 reachable before running this harness. Then:
@@ -36,6 +93,34 @@ allow decision, stays cookie/beacon-silent beforehand, and then sends the same
 expected identity and redaction fields.
 It therefore covers the real layout, template, CSP path, static asset URL,
 cached HTML, and bundled Boomerang rather than a copied fixture.
+
+Every browser test first binds its URL to `MAGENTO_ROOT` using a random, exclusive,
+short-lived PHP challenge in that installation's `pub` directory. It checks the
+nonce and **web/FPM** PHP line, not only CLI PHP. Redirects, another document root,
+or a mismatched PHP line fail. The challenge is removed in `finally`, including
+after failures. It emits no configuration or secrets, and is never packaged
+with the module. The disposable Nginx configuration permits only that tightly
+named test path; a separately provisioned installation must configure the same
+test-only location. Never add that location to a live shop. Direct browser runs
+now also require `BASICRUM_DISPOSABLE_MAGENTO=1` and `MAGENTO_ROOT`.
+
+Basicrum script responses are hashed from the bytes actually returned to the
+browser and compared with the candidate's packaged loader/Boomerang files.
+Missing, unexpected or stale scripts fail; the primary storefront test requires
+both the consent wrapper and the real Boomerang response. Server-side source
+identity alone can no longer pass while stale deployed static content is served.
+Script merging or rewriting is not supported by this exact-byte baseline.
+
+An additional test establishes two independent anonymous browser contexts. The
+first visitor grants consent and receives a measurement cookie, then requests a
+unique URL that must be a cache MISS. The second visitor's first request to that
+URL must be a HIT with the same inline configuration, no Boomerang request, and
+no measurement cookie or beacon until its own allow callback. This exercises
+cache population by a request carrying measurement state, not only a page
+cached before consent. The callback itself still does not persist consent.
+The first visitor uses a second tab in its existing cookie jar for the MISS;
+this avoids conflating the cache test with navigation-time beacon interception.
+Both granted pages withdraw after the assertions. The network guard remains strict.
 
 Enable full-page caching and use a cacheable homepage. For built-in FPC, the
 disposable installation must be in developer mode so Magento emits its debug
@@ -124,6 +209,8 @@ it does not forward beacons to that collector.
 
 ```sh
 MAGENTO_STOREFRONT_URL=https://magento.test/ \
+MAGENTO_ROOT=/absolute/path/to/disposable-magento \
+BASICRUM_DISPOSABLE_MAGENTO=1 \
 MAGENTO_BEACON_URL=https://collector.basicrum.test/beacon \
 MAGENTO_SITE_ID=550e8400-e29b-41d4-a716-446655440000 \
 MAGENTO_SAMPLE_DATA=1 \
@@ -175,15 +262,23 @@ open that page, and login challenges such as two-factor authentication or
 CAPTCHA must be disabled for this isolated test account.
 
 The gate requires Git and a clean, committed module checkout, including no
-untracked files. Magento may register that checkout directly or an exact copy.
-Before any upgrade/configuration write it resolves `Basicrum_Analytics` through
+untracked files. First build the Git-commit ZIP using `build-artifact.sh` and
+install its contents. `BASICRUM_ARTIFACT` can select a ZIP path; the default is
+`.test-results/package/basicrum-analytics.zip`. The gate hashes every ZIP entry
+against the candidate's production manifest. Before any upgrade/configuration
+write it also resolves `Basicrum_Analytics` through
 Magento's actual `ComponentRegistrar` and compares SHA-256 hashes of package
 files (including PHP, XML, templates, assets, notices, and top-level metadata).
-Missing, modified, and extra files fail. Only development/output directories
-are excluded: `.git`, `.github`, `docs`, `tests`, `node_modules`, `vendor`,
-`.test-results`, `test-results`, and `playwright-report`. Internal source symlinks
-are rejected; the module directory itself may be a symlink. Copy the complete
-checkout when using a separate installed directory, not selected PHP files.
+Missing, modified, and any extra installed files fail, including ignored/development
+files. This strict distribution gate is not for a full checkout or checkout symlink;
+the separate `configure-disposable.sh` development runner still supports those.
+The expected manifest hashes committed Git blobs, not working-tree files.
+Exclusions come from the committed `composer.json` archive boundary, never installed
+metadata; `.gitattributes` applies the same boundary to the Git ZIP. Ignored or
+untracked local files cannot become expected archive entries. Tests, development
+tools/configuration, CI and generated output are not shipped. PHP, XML, templates,
+assets, README, changelog and third-party notices remain verified. Internal source
+symlinks are rejected; the module directory itself may be a symlink.
 
 The gate then compares the installed Magento
 Open Source patch exactly and the PHP, Composer, MariaDB, and OpenSearch
@@ -198,16 +293,15 @@ then exercises the rendered storefront and intercepted beacon, reloads a warm
 full-page-cache response, logs into Magento Admin, and verifies that the
 Basicrum logo and required configuration/status fields render. Any command,
 login, rendering assertion, or browser check failure blocks the tag.
-Afterward it rechecks both the clean checkout/commit and installed file identity.
+Afterward it rechecks the clean checkout/commit, installed files, and ZIP identity.
 The final success line records the candidate SHA and intended tag; retain the
 command output as release evidence and tag only that exact commit. Do not edit
 or resync either tree during the gate. These checks tie source evidence to the
-candidate; they do not replace a future installable-artifact smoke test.
+candidate and to the tested distribution bytes. The success line certifies only
+the native technical checks, not legal approval, a published Composer install,
+untested themes, or optional skipped journeys. The rights-holder-approved module
+LICENSE remains a separate release requirement.
 
-This repository does not provision Magento or store Admin credentials in CI.
-Consequently the native gate remains a separately required release check on a
-maintained disposable installation; adding the script does not mean it has
-already passed.
-Regular CI runs only native browser test discovery (`--list`) to catch syntax
-and import errors without a Magento installation. Discovery is not native test
-execution or release certification.
+Fast CI retains native browser test discovery (`--list`); the separate native
+workflow provisions and executes Magento. Neither discovery nor merely adding
+a workflow is evidence of a passing native run.

@@ -1,0 +1,22 @@
+name: Pinned native Magento
+on:
+  workflow_dispatch:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Build and provision isolated Mage-OS mirror baseline
+        run: sh tests/integration/docker/start.sh
+      - name: Install distribution and run pinned native gate
+        run: |
+          docker compose -f tests/integration/docker/compose.yaml exec -T -w /module php sh tests/integration/build-artifact.sh
+          docker compose -f tests/integration/docker/compose.yaml exec -T php sh /module/tests/integration/docker/install-artifact.sh
+          docker compose -f tests/integration/docker/compose.yaml exec -T -w /module -e BASICRUM_RELEASE_TAG=0.1.0 php sh tests/integration/release-gate.sh
+      - name: Stop only this disposable stack
+        if: always()
+        run: docker compose -f tests/integration/docker/compose.yaml down

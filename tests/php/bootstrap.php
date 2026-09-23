@@ -214,6 +214,7 @@ namespace Magento\Store\Model {
     interface StoreManagerInterface
     {
         public function getStore($storeId = null);
+        public function getWebsite($websiteId = null);
     }
 }
 
@@ -292,26 +293,35 @@ namespace {
 
     final class BasicrumTestStore
     {
-        public function __construct(private string $websiteCode)
+        public function __construct(private int $websiteId)
         {
         }
 
-        public function getWebsite(): BasicrumTestWebsite
+        public function getWebsiteId(): int
         {
-            return new BasicrumTestWebsite($this->websiteCode);
+            return $this->websiteId;
         }
     }
 
     final class BasicrumTestStoreManager implements \Magento\Store\Model\StoreManagerInterface
     {
+        private array $websites;
+
         /** @param array<string, string> $storeWebsites */
         public function __construct(private array $storeWebsites = [])
         {
+            $this->websites = array_values(array_unique(['base', ...array_values($storeWebsites)]));
         }
 
         public function getStore($code = null): BasicrumTestStore
         {
-            return new BasicrumTestStore($this->storeWebsites[(string) $code] ?? 'base');
+            $websiteCode = $this->storeWebsites[(string) $code] ?? 'base';
+            return new BasicrumTestStore(array_search($websiteCode, $this->websites, true) + 1);
+        }
+
+        public function getWebsite($websiteId = null): BasicrumTestWebsite
+        {
+            return new BasicrumTestWebsite($this->websites[$websiteId - 1]);
         }
     }
 

@@ -6,8 +6,15 @@ use Basicrum\Analytics\Api\PageTypeDetectorInterface;
 use Basicrum\Analytics\Model\Config;
 use Magento\Framework\View\Element\Block\ArgumentInterface;
 
+/** @phpstan-import-type RuntimeConfig from Config */
 class Footer implements ArgumentInterface
 {
+    /**
+     * Supply validated store configuration and native page classification.
+     *
+     * @param PageTypeDetectorInterface $pageTypeDetector
+     * @param Config $config
+     */
     public function __construct(
         private PageTypeDetectorInterface $pageTypeDetector,
         private Config $config
@@ -17,7 +24,7 @@ class Footer implements ArgumentInterface
     /**
      * Get validated effective configuration or null when monitoring is inactive.
      *
-     * @return array<string, bool|int|string>|null
+     * @return RuntimeConfig|null
      */
     public function getConfig(): ?array
     {

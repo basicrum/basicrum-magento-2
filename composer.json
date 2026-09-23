@@ -18,7 +18,10 @@
     },
     "archive": {
         "exclude": [
-            ".github"
+            "/.github", "/.gitignore", "/.gitattributes", "/.test-results",
+            "/docs", "/tests", "/node_modules", "/vendor", "/test-results", "/playwright-report",
+            "/package.json", "/package-lock.json", "/playwright.config.js", "/playwright.integration.config.js",
+            "/phpstan.neon", "/phpcs.xml"
         ]
     },
     "repositories": [
@@ -29,7 +32,11 @@
     ],
     "autoload": {
         "exclude-from-classmap": [
-            "/tests/"
+            "/tests/",
+            "/.test-results/",
+            "/node_modules/",
+            "/test-results/",
+            "/playwright-report/"
         ],
         "files": [
             "registration.php"

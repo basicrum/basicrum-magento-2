@@ -1,0 +1,11 @@
+includes:
+    - tests/quality/vendor/bitexpert/phpstan-magento/extension.neon
+
+parameters:
+    level: 8
+    paths:
+        - Api
+        - Block
+        - Model
+        - ViewModel
+    tmpDir: .test-results/phpstan

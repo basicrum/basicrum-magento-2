@@ -227,7 +227,20 @@ $tests['technical identity and direct Magento dependencies are declared consiste
     basicrum_assert_same('^101.2', $composer['require']['magento/module-config'], 'Config dependency');
     basicrum_assert_same('^100.4', $composer['require']['magento/module-csp'], 'CSP dependency');
     basicrum_assert_same('^101.1', $composer['require']['magento/module-store'], 'Store dependency');
-    basicrum_assert_same(['/tests/'], $composer['autoload']['exclude-from-classmap'], 'test doubles excluded from production classmap');
+    basicrum_assert_same(
+        ['/tests/', '/.test-results/', '/node_modules/', '/test-results/', '/playwright-report/'],
+        $composer['autoload']['exclude-from-classmap'],
+        'test doubles and generated verification trees excluded from production classmap'
+    );
+    $quality = json_decode(file_get_contents($root . '/tests/quality/composer.json'), true, 512, JSON_THROW_ON_ERROR);
+    foreach ($composer['require'] as $package => $constraint) {
+        basicrum_assert_same($constraint, $quality['require'][$package] ?? null, 'quality constraint matches ' . $package);
+    }
+    $exportExclusions = array_map(
+        static fn (string $line): string => explode(' ', trim($line))[0],
+        file($root . '/.gitattributes', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES)
+    );
+    basicrum_assert_same($composer['archive']['exclude'], $exportExclusions, 'Composer and Git production boundaries match');
     basicrum_assert_same(
         ['Basicrum\\Analytics\\' => ''],
         $composer['autoload']['psr-4'],
@@ -417,6 +430,12 @@ $tests['native release gate stops before mutations when identity or baseline che
         file_put_contents($bin . '/php', <<<'SH'
 #!/bin/sh
 case "$1" in
+    */check-artifact.php)
+        if [ "${BASICRUM_FAKE_ARTIFACT_MISMATCH:-0}" = "1" ]; then
+            echo 'artifact mismatch' >&2
+            exit 67
+        fi
+        exit 0 ;;
     */check-installed-candidate.php)
         if [ "${BASICRUM_FAKE_SOURCE_MISMATCH:-0}" = "1" ]; then
             echo 'installed candidate mismatch' >&2
@@ -448,6 +467,9 @@ SH);
             'MAGENTO_ADMIN_USERNAME' => 'synthetic',
             'MAGENTO_ADMIN_PASSWORD' => 'synthetic',
         ];
+        $artifactMismatch = $runReleaseGateGuard('0.1.0', $environment + ['BASICRUM_FAKE_ARTIFACT_MISMATCH' => '1']);
+        basicrum_assert_same(67, $artifactMismatch['status'], 'artifact mismatch propagates');
+        basicrum_assert_not_contains('unexpected Magento mutation', $artifactMismatch['stderr'], 'no mutation on artifact mismatch');
         $mismatched = $runReleaseGateGuard('0.1.0', $environment + ['BASICRUM_FAKE_SOURCE_MISMATCH' => '1']);
         basicrum_assert_same(68, $mismatched['status'], 'installed candidate mismatch propagates');
         basicrum_assert_contains('installed candidate mismatch', $mismatched['stderr'], 'installed identity was checked');
@@ -466,16 +488,14 @@ SH);
     }
 };
 
-$tests['candidate identity rejects stale missing extra and linked installed source'] = function (): void {
+$tests['committed candidate excludes ignored files and strictly checks the installed distribution'] = function (): void {
     $temporaryRoot = sys_get_temp_dir() . '/basicrum-candidate-' . bin2hex(random_bytes(6));
     foreach (['candidate', 'installed'] as $name) {
         $directory = $temporaryRoot . '/' . $name;
         mkdir($directory . '/view', 0700, true);
-        mkdir($directory . '/docs', 0700);
         file_put_contents($directory . '/registration.php', '<?php // fixture');
-        file_put_contents($directory . '/composer.json', '{}');
+        file_put_contents($directory . '/composer.json', '{"archive":{"exclude":["/docs","/.gitignore","/.gitattributes"]}}');
         file_put_contents($directory . '/view/loader.js', '// reviewed loader');
-        file_put_contents($directory . '/docs/notes.md', $name);
     }
     $candidate = $temporaryRoot . '/candidate';
     $installed = $temporaryRoot . '/installed';
@@ -489,13 +509,46 @@ $tests['candidate identity rejects stale missing extra and linked installed sour
         throw new RuntimeException('Incorrect installed candidate was accepted.');
     };
     try {
-        basicrum_assert_installed_candidate($candidate, $candidate);
+        mkdir($candidate . '/docs', 0700);
+        file_put_contents($candidate . '/docs/notes.md', 'development only');
+        file_put_contents($candidate . '/.gitignore', "*.secret\n");
+        file_put_contents($candidate . '/.gitattributes', "/docs export-ignore\n/.gitignore export-ignore\n/.gitattributes export-ignore\n");
+        basicrum_candidate_git($candidate, ['init', '--quiet', '--template=']);
+        basicrum_candidate_git($candidate, ['add', '.']);
+        basicrum_candidate_git($candidate, [
+            '-c', 'user.name=Basicrum Test', '-c', 'user.email=test@example.test', '-c', 'core.hooksPath=/dev/null',
+            'commit', '--quiet', '--no-gpg-sign', '-m', 'Synthetic package fixture'
+        ]);
+        $expected = basicrum_candidate_files($candidate);
+        basicrum_assert_same(['composer.json', 'registration.php', 'view/loader.js'], array_keys($expected), 'committed production boundary');
+        // Also cover a locally ignored file, independently of the tracked .gitignore.
+        mkdir($candidate . '/.git/info', 0700);
+        file_put_contents($candidate . '/.git/info/exclude', "local-only.txt\n");
+        file_put_contents($candidate . '/local-only.txt', 'synthetic local data');
+        file_put_contents($candidate . '/fixture.secret', 'synthetic, not a credential');
+        basicrum_assert_same('', basicrum_candidate_git($candidate, ['status', '--porcelain']), 'ignored files do not dirty Git');
+        basicrum_assert_same($expected, basicrum_candidate_files($candidate), 'ignored files cannot enter expected manifest');
+        $archive = $temporaryRoot . '/package.tar';
+        basicrum_candidate_git($candidate, ['archive', '--format=tar', '--output=' . $archive, 'HEAD']);
+        mkdir($temporaryRoot . '/exported', 0700);
+        (new PharData($archive))->extractTo($temporaryRoot . '/exported');
+        basicrum_assert_installed_candidate($candidate, $temporaryRoot . '/exported');
+        file_put_contents($candidate . '/view/loader.js', '// uncommitted change');
+        basicrum_assert_same($expected, basicrum_candidate_files($candidate), 'manifest hashes committed blobs, not dirty files');
         basicrum_assert_installed_candidate($candidate, $installed);
+        mkdir($installed . '/docs', 0700);
+        file_put_contents($installed . '/docs/notes.md', 'stale development file');
+        $expectMismatch('docs/notes.md');
+        unlink($installed . '/docs/notes.md');
+        rmdir($installed . '/docs');
+        file_put_contents($installed . '/.unexpected', 'extra hidden file');
+        $expectMismatch('.unexpected');
+        unlink($installed . '/.unexpected');
         file_put_contents($installed . '/view/loader.js', '// stale loader');
         $expectMismatch('view/loader.js');
         unlink($installed . '/view/loader.js');
         $expectMismatch('view/loader.js');
-        copy($candidate . '/view/loader.js', $installed . '/view/loader.js');
+        file_put_contents($installed . '/view/loader.js', '// reviewed loader');
         file_put_contents($installed . '/view/extra.js', '// unexpected asset');
         $expectMismatch('view/extra.js');
         unlink($installed . '/view/extra.js');

@@ -44,6 +44,12 @@ class PageTypeDetector implements PageTypeDetectorInterface
         'customer_account_forgotpassword' => 'Forgot Password',
     ];
 
+    /**
+     * Initialize detection from Magento's final request and response.
+     *
+     * @param HttpRequest $request
+     * @param HttpResponse $response
+     */
     public function __construct(
         private HttpRequest $request,
         private HttpResponse $response

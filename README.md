@@ -8,11 +8,19 @@ Brum Site ID are valid.
 ## Supported baseline
 
 The Phase 1 integration baseline is Magento Open Source **2.4.7-p10** with
-**PHP 8.3** and Composer 2.10. The complete disposable-store dependency set is
-pinned in `tests/integration/baseline.env`. Focused PHP checks run on PHP 8.2,
+**PHP 8.3** and Composer 2.10. Platform version requirements are declared in
+`tests/integration/baseline.env`; container images are pinned by digest. The full
+application dependency set is not locked: first-time provisioning resolves
+transitive Composer dependencies, so upstream changes can affect a new install.
+Focused PHP checks run on PHP 8.2,
 8.3, and 8.4. Composer metadata allows Magento framework 103.x so the module
 can be evaluated on adjacent Magento 2.4 release lines, but only the pinned
 PHP 8.3 combination is declared for disposable Magento integration testing.
+This combination has now been exercised with Luma and built-in full-page cache,
+including the installed distribution ZIP. Adobe Commerce, Hyvä, headless/PWA,
+Varnish, and other Magento/PHP combinations are **not** certified by that run.
+The source repository's `docs/QUALITY-AND-RELEASE-READINESS.md` records the exact
+verification scope, skips, and remaining release requirements.
 
 ## Installation
 
@@ -224,18 +232,42 @@ test. External payment scripts must be disabled in that test installation.
 The regular CI workflow runs strict Composer 2.10 validation and optimized
 production classmap checks plus the fast PHP and Chromium checks. Browser
 retries in CI retain diagnostics, but a flaky pass still fails the job.
-CI also discovers the native browser tests with `--list`; this catches load-time
-errors but does not execute Magento integration tests.
+Additional CI checks run Magento-aware PHPStan level 8 and Magento coding
+standards against real Magento components, with lowest/stable dependency
+resolution on PHP 8.2–8.4 and a locked PHP 8.3 job. These component checks are
+not full-platform compatibility certification. The committed tooling lock requires
+PHP 8.3 or 8.4 and resolves framework 103.0.9 (the Magento 2.4.9 component line).
+The locally tested PHP 8.3 lowest resolution uses framework 103.0.7 (2.4.7 GA),
+not 2.4.7-p10. CI's lowest/stable jobs resolve afresh for their PHP version; their
+logs report the exact component versions. No PHPStan run against the native
+2.4.7-p10 dependency set is claimed. Run the locked tools locally on PHP 8.3/8.4:
+
+```sh
+composer --working-dir=tests/quality install --no-interaction --no-scripts
+sh tests/quality/check.sh
+```
+
+The native CI workflow provisions a separate Magento-version/image-pinned stack from the
+anonymous Mage-OS mirror; it does not use production credentials. It disables
+external Braintree scripts only in that test stack. See the integration README
+for setup, synthetic credentials, localhost-only ports, and cleanup.
 Before tagging Phase 1 as `0.1.0`, the documented native
 release gate is also required: it requires a clean candidate checkout, verifies
-the registered installed module matches it, and enforces all versions in `baseline.env`,
+the distribution ZIP and registered installed module match it, and enforces all versions in `baseline.env`,
 then runs Magento upgrade, DI compilation, static deployment, native save tests,
 storefront/beacon assertions with a proven full-page-cache HIT, and an authenticated
-Admin rendering check. It rechecks candidate identity afterward and records the
+Admin rendering check. A temporary challenge binds the browser URL to that
+installation and its web PHP version; served loader/Boomerang bytes must match
+the candidate. A visitor with measurement cookies populates a fresh cache entry;
+another visitor's first request to that URL must be a HIT and remain silent until
+its own allow callback. It rechecks candidate identity afterward and records the
 tested commit SHA in its success output. Run `npm ci` first: the native runner
 uses only the installed Playwright binary, never an automatic download.
-The disposable Magento gate needs a provisioned installation and test
-Admin account and is not reported as passing unless it is run separately.
+The production archive is built from the clean Git commit, never loose working-tree
+files. It excludes tests, CI, developer tooling/configuration and generated output,
+and retains production code/assets and license notices. Installed-package checks
+reject all extra files, including leftover development directories and hidden files.
+No remote CI job is reported as passing merely because its definition was added.
 
 ## Privacy and lifecycle notes
 
