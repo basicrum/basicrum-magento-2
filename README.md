@@ -216,7 +216,11 @@ the packaged readable and minified loaders and the real bundled Boomerang
 against intercepted local requests. Global setup renders the actual PHP footer
 template using PHP 8.3 in Docker (Docker must be running), then the browser
 executes its inline configuration and Wait After Onload plugin. Set
-`BASICRUM_TEST_PHP=/absolute/path/to/php` to use an installed PHP CLI instead.
+`BASICRUM_TEST_PHP=php` (or an absolute executable path) to use an installed
+PHP CLI instead. The Chromium CI job explicitly provisions PHP 8.3 and selects
+it through this setting; fixture rendering does not pull or start a Docker image
+in that job. A missing or failing selected PHP executable fails setup without
+falling back to Docker.
 Magento block/renderer doubles are used here; native rendering is covered by
 the separate integration suite. The checks cover pre-consent silence, one-time
 loading, denial and withdrawal races, cookie cleanup, query redaction, and
@@ -230,8 +234,9 @@ transactions. Browser traffic is limited to the disposable storefront/Admin;
 the expected beacon is fulfilled locally and unexpected destinations fail the
 test. External payment scripts must be disabled in that test installation.
 The regular CI workflow runs strict Composer 2.10 validation and optimized
-production classmap checks plus the fast PHP and Chromium checks. Browser
-retries in CI retain diagnostics, but a flaky pass still fails the job.
+production classmap checks plus the fast PHP and Chromium checks. The Chromium
+job uploads an HTML report with traces from failed test attempts, retained for
+seven days. A flaky pass still fails the job; retries do not hide failures.
 Additional CI checks run Magento-aware PHPStan level 8 and Magento coding
 standards against real Magento components, with lowest/stable dependency
 resolution on PHP 8.2–8.4 and a locked PHP 8.3 job. These component checks are

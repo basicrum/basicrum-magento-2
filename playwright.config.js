@@ -9,10 +9,11 @@ module.exports = defineConfig({
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   failOnFlakyTests: Boolean(process.env.CI),
-  reporter: "line",
+  reporter: process.env.CI ? [["line"], ["html", { open: "never" }]] : "line",
   outputDir: ".test-results/playwright",
   use: {
     browserName: "chromium",
-    headless: true
+    headless: true,
+    trace: process.env.CI ? "retain-on-failure" : "off"
   }
 });
