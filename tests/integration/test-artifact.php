@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 // Run after build-artifact.sh; mutate temporary copies, never the candidate ZIP.
-$artifact = $argv[1] ?? dirname(__DIR__, 2) . '/.test-results/package/basicrum-analytics.zip';
+$artifact = $argv[1] ?? dirname(__DIR__, 2) . '/.test-results/package/basicrum-magento-2.zip';
 if (!is_file($artifact)) {
     throw new RuntimeException('Build the candidate ZIP before running archive regression checks.');
 }

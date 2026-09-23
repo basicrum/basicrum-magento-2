@@ -3,7 +3,7 @@ set -eu
 test "${BASICRUM_DISPOSABLE_MAGENTO:-}" = 1
 test "${MAGENTO_ROOT:-}" = /var/www/html
 module_root=$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)
-artifact="$module_root/.test-results/package/basicrum-analytics.zip"
+artifact="$module_root/.test-results/package/basicrum-magento-2.zip"
 php "$module_root/tests/integration/check-artifact.php" "$artifact"
 cd "$MAGENTO_ROOT"
 # Exact destination inside this disposable stack. Do not delete stale files:

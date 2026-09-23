@@ -32,6 +32,9 @@ For subsequent runs after `down`, first recreate the containers with
 `docker compose -f tests/integration/docker/compose.yaml up -d`.
 Application/database volumes are retained; do not reprovision them. Git's
 `safe.directory` is baked into the PHP image and survives container recreation.
+OpenSearch data is not persisted by this test stack. The release gate rebuilds
+`catalogsearch_fulltext` through Magento's standard indexer before browser checks,
+so a reused installation does not depend on an old search index or background cron.
 After harness Dockerfile changes, run `docker compose -f tests/integration/docker/compose.yaml build php`
 before `up -d`. First-time `start.sh` installs npm dependencies using the caller's
 UID/GID so the bind-mounted checkout does not acquire root-owned `node_modules`.
@@ -306,7 +309,7 @@ CAPTCHA must be disabled for this isolated test account.
 The gate requires Git and a clean, committed module checkout, including no
 untracked files. First build the Git-commit ZIP using `build-artifact.sh` and
 install its contents. `BASICRUM_ARTIFACT` can select a ZIP path; the default is
-`.test-results/package/basicrum-analytics.zip`. The gate hashes every ZIP entry
+`.test-results/package/basicrum-magento-2.zip`. The gate hashes every ZIP entry
 against the candidate's production manifest. Before any upgrade/configuration
 write it also resolves `Basicrum_Analytics` through
 Magento's actual `ComponentRegistrar` and compares SHA-256 hashes of package
