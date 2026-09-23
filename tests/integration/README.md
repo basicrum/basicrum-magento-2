@@ -306,7 +306,7 @@ CAPTCHA must be disabled for this isolated test account.
 The gate requires Git and a clean, committed module checkout, including no
 untracked files. First build the Git-commit ZIP using `build-artifact.sh` and
 install its contents. `BASICRUM_ARTIFACT` can select a ZIP path; the default is
-`.test-results/package/basicrum-analytics.zip`. The gate hashes every ZIP entry
+`.test-results/package/basicrum-magento-2.zip`. The gate hashes every ZIP entry
 against the candidate's production manifest. Before any upgrade/configuration
 write it also resolves `Basicrum_Analytics` through
 Magento's actual `ComponentRegistrar` and compares SHA-256 hashes of package

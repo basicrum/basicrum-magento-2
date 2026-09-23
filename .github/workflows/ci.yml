@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Validate Composer metadata strictly
-        run: docker run --rm -v "$GITHUB_WORKSPACE:/app" -w /app composer:2.10 validate --strict --no-check-publish
+        run: docker run --rm -v "$GITHUB_WORKSPACE:/app" -w /app composer:2.10 validate --strict
 
       - name: Check optimized production classmap
         run: |

@@ -1,6 +1,6 @@
 # Changelog
 
-Notable changes to the Basicrum Analytics module are recorded here.
+Notable changes to Basicrum for Magento 2 are recorded here.
 
 ## [Unreleased]
 
@@ -28,6 +28,13 @@ Notable changes to the Basicrum Analytics module are recorded here.
 
 ### Changed
 
+- **Breaking packaging change:** the Composer name is now
+  `basicrum/basicrum-magento-2`, with the public title "Basicrum for Magento 2"
+  and distribution filename `basicrum-magento-2.zip`. The old Composer name
+  conflicts with the new package; no compatibility replacement is declared.
+  Magento module/namespace/ACL identifiers and configuration paths are unchanged
+  by this packaging change. Packagist registration and release publication are
+  separate, pending maintainer steps; historical tags are not rewritten.
 - **Breaking:** Magento 2 `p_type` now uses Magento 1's exact 27 named labels
   for equivalent native pages, including `Checkout Success`, account/address,
   wishlist, guest-order, and PayPal billing-agreement pages. HTTP 404 takes

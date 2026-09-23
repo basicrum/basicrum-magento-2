@@ -223,6 +223,16 @@ $tests['technical identity and direct Magento dependencies are declared consiste
         512,
         JSON_THROW_ON_ERROR
     );
+    basicrum_assert_same('basicrum/basicrum-magento-2', $composer['name'], 'canonical Composer package name');
+    basicrum_assert_same('magento2-module', $composer['type'], 'Magento package type');
+    basicrum_assert_same(
+        ['basicrum/basicrum-analytics' => '*'],
+        $composer['conflict'] ?? [],
+        'old and new Composer packages cannot be installed together'
+    );
+    foreach (['replace', 'provide'] as $alias) {
+        basicrum_assert_false(isset($composer[$alias]), 'no backward-compatible Composer alias: ' . $alias);
+    }
     basicrum_assert_same('^102.0', $composer['require']['magento/module-backend'], 'Backend dependency');
     basicrum_assert_same('^101.2', $composer['require']['magento/module-config'], 'Config dependency');
     basicrum_assert_same('^100.4', $composer['require']['magento/module-csp'], 'CSP dependency');

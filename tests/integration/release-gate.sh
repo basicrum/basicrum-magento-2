@@ -37,7 +37,7 @@ module_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 magento="${MAGENTO_ROOT}/bin/magento"
 candidate_commit=$(sh "$module_root/tests/integration/check-candidate.sh")
 echo "Checking Basicrum candidate ${candidate_commit} for ${BASICRUM_RELEASE_TAG}."
-artifact=${BASICRUM_ARTIFACT:-$module_root/.test-results/package/basicrum-analytics.zip}
+artifact=${BASICRUM_ARTIFACT:-$module_root/.test-results/package/basicrum-magento-2.zip}
 php "$module_root/tests/integration/check-artifact.php" "$artifact"
 php "$module_root/tests/integration/check-installed-candidate.php"
 

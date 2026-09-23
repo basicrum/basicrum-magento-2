@@ -1,4 +1,4 @@
-# Basicrum Analytics for Magento 2
+# Basicrum for Magento 2
 
 Basicrum adds Boomerang real user monitoring (RUM) to a Magento 2 storefront.
 Monitoring is fail-closed: no Basicrum storefront scripts are emitted unless
@@ -24,11 +24,20 @@ verification scope, skips, and remaining release requirements.
 
 ## Installation
 
-Install a published package with Composer:
+The Composer package is being renamed to `basicrum/basicrum-magento-2`.
+This source change does not register the new Packagist listing or publish a
+release. After the new package's `0.1.0` release is published, install it with:
 
 ```sh
-composer require basicrum/basicrum-analytics
+composer require 'basicrum/basicrum-magento-2:^0.1'
 ```
+
+The version constraint deliberately excludes the historical `0.0.x` releases,
+which may also appear under the new name when Packagist imports the repository.
+Do not drop the constraint to make an unpublished release install. Until
+`0.1.0` is available, use a reviewed source checkout for development only.
+See the [package migration checklist](https://github.com/basicrum/basicrum-magento-2/blob/main/docs/PACKAGE-NAMING-MIGRATION.md)
+for the separate maintainer steps and existing-installation considerations.
 
 For a manual source installation, place this module at the exact path below.
 The casing is required on case-sensitive filesystems:
@@ -53,7 +62,7 @@ static content using the store's normal deployment process as well.
 
 ## Configuration
 
-Open **Stores > Configuration > Basicrum Analytics**. Every setting supports
+Open **Stores > Configuration > Basicrum > Basicrum for Magento 2**. Every setting supports
 Magento default, website, and store inheritance. Display-only status, version,
 and callback instructions have no inheritance controls or stored values.
 Visitor Consent and Privacy open expanded each time you visit the page. You
@@ -154,6 +163,13 @@ Automatic consent-provider adapters are not part of Phase 1.
 
 No data migration renames, deletes, or heuristically rewrites stored settings.
 Review the following before enabling the upgraded module:
+
+- The Composer package name changes from `basicrum/basicrum-analytics` to
+  `basicrum/basicrum-magento-2`. The two packages must not be installed together;
+  Composer rejects that combination. Change the project requirement explicitly
+  when the new release is available; this is not an automatic or
+  backward-compatible replacement. A manual `app/code` copy must not coexist
+  with a Composer installation either. No stored configuration is deleted.
 
 - Magento 2 `p_type` labels now match Magento 1, including capitalization and
   spaces. This intentionally changes existing report groupings; historical

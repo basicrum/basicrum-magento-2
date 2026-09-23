@@ -1,7 +1,12 @@
 {
-    "name": "basicrum/basicrum-analytics",
-    "description": "Basicrum real user monitoring for Magento 2",
+    "name": "basicrum/basicrum-magento-2",
+    "description": "Basicrum real user monitoring (RUM) for Magento 2",
     "type": "magento2-module",
+    "homepage": "https://github.com/basicrum/basicrum-magento-2",
+    "support": {
+        "issues": "https://github.com/basicrum/basicrum-magento-2/issues",
+        "docs": "https://github.com/basicrum/basicrum-magento-2#readme"
+    },
     "authors": [
         {
             "name": "Tsvetan Stoychev",
@@ -15,6 +20,9 @@
         "magento/module-config": "^101.2",
         "magento/module-csp": "^100.4",
         "magento/module-store": "^101.1"
+    },
+    "conflict": {
+        "basicrum/basicrum-analytics": "*"
     },
     "archive": {
         "exclude": [
