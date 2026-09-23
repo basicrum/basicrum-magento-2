@@ -7,7 +7,7 @@
                 <resource id="Magento_Backend::stores">
                     <resource id="Magento_Backend::stores_settings">
                         <resource id="Magento_Config::config">
-                            <resource id="BasicRum_Analytics::basicrum_analytics" title="BasicRum Analytics Configuration" sortOrder="10" />
+                            <resource id="Basicrum_Analytics::basicrum_analytics" title="Basicrum Analytics Configuration" sortOrder="10" />
                         </resource>
                     </resource>
                 </resource>

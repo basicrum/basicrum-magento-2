@@ -1,0 +1,14 @@
+<?php
+/**
+ * @var \Basicrum\Analytics\Block\Adminhtml\System\Config\Logo $block
+ * @var \Magento\Framework\Escaper $escaper
+ */
+?>
+<div class="basicrum-config-logo">
+    <img class="basicrum-config-logo__image"
+         src="<?= $escaper->escapeUrl($block->getLogoUrl()) ?>"
+         width="48"
+         height="48"
+         alt="<?= $escaper->escapeHtmlAttr(__('Basicrum logo')) ?>" />
+    <span><?= $escaper->escapeHtml(__('Basicrum Analytics')) ?></span>
+</div>

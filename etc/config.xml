@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
+    <default>
+        <basicrum>
+            <general>
+                <enabled>0</enabled>
+                <beacon_endpoint></beacon_endpoint>
+                <brum_site_id></brum_site_id>
+            </general>
+            <consent>
+                <enabled>1</enabled>
+            </consent>
+            <privacy>
+                <strip_query_string>0</strip_query_string>
+            </privacy>
+            <performance>
+                <wait_after_onload>0</wait_after_onload>
+                <delay_ms>0</delay_ms>
+            </performance>
+            <developer>
+                <development_mode>0</development_mode>
+            </developer>
+        </basicrum>
+    </default>
+</config>

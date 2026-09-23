@@ -1,32 +1,37 @@
 <?php
 declare(strict_types=1);
 
-namespace BasicRum\Analytics\Block\Adminhtml\System\Config;
+namespace Basicrum\Analytics\Block\Adminhtml\System\Config;
 
 use Magento\Config\Block\System\Config\Form\Field;
-use Magento\Backend\Block\Template\Context;
 use Magento\Framework\Data\Form\Element\AbstractElement;
 
 class Logo extends Field
 {
-    public function __construct(
-        Context $context,
-        array $data = []
-    ) {
-        parent::__construct($context, $data);
-    }
+    /** @var string */
+    protected $_template = 'Basicrum_Analytics::system/config/logo.phtml';
 
-    public function render(AbstractElement $element)
+    /**
+     * @inheritDoc
+     */
+    public function render(AbstractElement $element): string
     {
-        $html = '<div style="margin: 20px 0; text-align: center; font-size: 3rem;">';
-        $html .= '<img src="' . $this->getViewFileUrl('BasicRum_Analytics::images/basicrum-log.svg') . '" alt="BasicRum Logo" style="width: 35px; height: 35px;" />'; 
-        $html .= 'BasicRUM Analytics';
-        $html .= '</div>';
-        return $html;
+        return $this->_toHtml();
     }
 
-    protected function _getElementHtml(AbstractElement $element)
+    /**
+     * @inheritDoc
+     */
+    protected function _getElementHtml(AbstractElement $element): string
     {
         return $this->render($element);
+    }
+
+    /**
+     * Resolve the logo through Magento's deployed static-asset URLs.
+     */
+    public function getLogoUrl(): string
+    {
+        return $this->getViewFileUrl('Basicrum_Analytics::images/basicrum-logo.png');
     }
 }

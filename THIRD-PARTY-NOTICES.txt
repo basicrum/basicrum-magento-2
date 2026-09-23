@@ -1,0 +1,42 @@
+# Third-Party Notices
+
+The Basicrum module's existing Composer metadata declares the module license as
+MIT. The module also distributes the following third-party software under its
+own license. Nothing in this notice changes or relicenses the module.
+
+## Boomerang 1.815.60
+
+- Project: Akamai Boomerang (https://github.com/akamai/boomerang)
+- Bundled file: `view/frontend/web/js/boomr/boomerang-1.815.60.cutting-edge.min.js`
+- License: BSD License
+- License text: `view/frontend/web/js/boomr/LICENSE.txt`
+- Source: commit `ead2783a33a2ce91205fe34f8fc992433faba9a2` in the `master` branch of
+  https://github.com/basicrum/boomerang, a fork of upstream Akamai Boomerang
+- Reproducible build: Node 12 (`.nvmrc`), `npm ci` against the source lockfile
+  (uglify-js 3.19.3), then
+  `grunt clean build --build-flavor=cutting-edge --build-number=815`
+- SHA-256: `90e8a1c85949b10d43e441efc3f0545f95e4384e26ee3042344a8b2b4110589c`
+- Banner note: the artifact banner stamps parent commit
+  `564759ed70de7801bb64de5e2025fb6ac049ff5f` because the final source change
+  was uncommitted when the shipped file was generated; the code matches
+  `ead2783a` byte for byte
+- Fork changes include removal of Long Tasks monitoring and deprecated FID,
+  Time to First Interaction changes, removal of unused utilities, and the
+  Basicrum configuration bootstrap.
+
+The Boomerang copyright notice and BSD license remain applicable to this file.
+
+## Boomerang Loader Snippet
+
+- Project: Akamai Boomerang (https://github.com/akamai/boomerang)
+- Bundled and adapted files: `view/frontend/web/js/loaders/boomerang-loader-v15.js`,
+  its minified build, and the standard loader block inside the consent wrapper
+- License: BSD License
+- License text: `view/frontend/web/js/boomr/LICENSE.txt`
+- Provenance: Boomerang Loader Snippet version 15, taken from the reviewed
+  Basicrum WordPress implementation at commit
+  `64f19d9e5a9fbe580c12c19796e86e3ad0dd17ff`
+
+The consent wrapper adds Basicrum lifecycle, withdrawal, wait cancellation,
+and legacy-cookie cleanup around the loader. Those adaptations do not change
+the license that applies to the original loader snippet.

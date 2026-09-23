@@ -1,0 +1,20 @@
+{
+    "name": "basicrum/module-quality-tools",
+    "description": "Isolated development tools; never installed with the module",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.2 <8.5",
+        "magento/framework": "^103.0",
+        "magento/module-backend": "^102.0",
+        "magento/module-config": "^101.2",
+        "magento/module-csp": "^100.4",
+        "magento/module-store": "^101.1",
+        "bitexpert/phpstan-magento": "0.44.0",
+        "magento/magento-coding-standard": "41"
+    },
+    "repositories": [
+        { "type": "composer", "url": "https://mirror.mage-os.org/" }
+    ],
+    "autoload": { "psr-4": { "Basicrum\\Analytics\\": "../../" } },
+    "config": { "allow-plugins": false, "sort-packages": true }
+}

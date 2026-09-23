@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
+    <default>
+        <csp>
+            <mode>
+                <storefront_basicrumcsptest_index_index>
+                    <report_only>0</report_only>
+                </storefront_basicrumcsptest_index_index>
+            </mode>
+            <policies>
+                <storefront_basicrumcsptest_index_index>
+                    <scripts>
+                        <inline>0</inline>
+                    </scripts>
+                </storefront_basicrumcsptest_index_index>
+            </policies>
+        </csp>
+    </default>
+</config>

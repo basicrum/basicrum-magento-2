@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<ruleset name="Basicrum Magento">
+    <description>Magento coding standards for first-party production PHP and templates.</description>
+    <rule ref="Magento2"/>
+    <!-- These stateless validators intentionally share save/runtime semantics;
+         plugins can intercept the consumers instead. No additional service layer. -->
+    <rule ref="Magento2.Functions.StaticFunction">
+        <exclude-pattern>*/Model/Config.php</exclude-pattern>
+    </rule>
+    <file>Api</file>
+    <file>Block</file>
+    <file>Model</file>
+    <file>ViewModel</file>
+    <file>view/frontend/templates</file>
+    <file>view/adminhtml/templates</file>
+    <file>registration.php</file>
+    <arg name="extensions" value="php,phtml"/>
+    <arg name="colors"/>
+</ruleset>

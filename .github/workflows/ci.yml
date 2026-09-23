@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  composer:
+    name: Composer 2.10 strict validation
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Validate Composer metadata strictly
+        run: docker run --rm -v "$GITHUB_WORKSPACE:/app" -w /app composer:2.10 validate --strict --no-check-publish
+
+      - name: Check optimized production classmap
+        run: |
+          docker run --rm -v "$GITHUB_WORKSPACE:/app" -w /app composer:2.10 dump-autoload --optimize --strict-psr --no-dev --no-scripts --no-plugins --no-interaction
+          docker run --rm -v "$GITHUB_WORKSPACE:/module:ro" -w /module php:8.3-cli php tests/php/check-classmap.php
+
+  php:
+    name: PHP ${{ matrix.php }} validation
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.3', '8.4']
+    container: php:${{ matrix.php }}-cli
+    steps:
+      - name: Install Git for committed-package regression checks
+        run: apt-get update && apt-get install -y --no-install-recommends git
+
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Report runtime
+        run: php --version
+
+      - name: Lint PHP
+        run: find . -type f \( -name '*.php' -o -name '*.phtml' \) -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
+
+      - name: Run focused PHP checks
+        run: php tests/php/run.php
+
+      - name: Validate declared PHP constraint
+        run: php -r '$data=json_decode(file_get_contents("composer.json"), true, 512, JSON_THROW_ON_ERROR); if (($data["require"]["php"] ?? "") !== ">=8.2 <8.5") { exit(1); }'
+
+  browser:
+    name: Chromium loader and beacon checks
+    runs-on: ubuntu-24.04
+    env:
+      BASICRUM_TEST_PHP: php
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up PHP for rendered browser fixtures
+        uses: shivammathur/setup-php@bf6b4fbd49ca58e4608c9c89fba0b8d90bd2a39f # 2.35.5
+        with:
+          php-version: '8.3'
+          tools: none
+          coverage: none
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22.19.0
+          cache: npm
+
+      - name: Install test dependencies
+        run: npm ci
+
+      - name: Check native integration test discovery (no Magento execution)
+        run: npx --no-install playwright test --config=playwright.integration.config.js --list
+
+      - name: Install Chromium
+        run: npx --no-install playwright install --with-deps chromium
+
+      - name: Run loader and real-Boomerang checks
+        run: npm test
+
+      - name: Upload browser report and failure traces
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: chromium-report
+          path: playwright-report/
+          retention-days: 7

@@ -3,43 +3,114 @@
         xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
     <system>
         <tab id="basicrum" translate="label" sortOrder="100">
-            <label>BasicRum</label>
+            <label>Basicrum</label>
         </tab>
-        <section id="basicrum" translate="label" type="text" sortOrder="900" showInDefault="1" showInWebsite="1" showInStore="1">
-            <label>BasicRum Analytics</label>
+        <section id="basicrum" translate="label" type="text" sortOrder="900"
+                 showInDefault="1" showInWebsite="1" showInStore="1">
+            <label>Basicrum Analytics</label>
             <tab>basicrum</tab>
-            <resource>BasicRum_Analytics::basicrum_analytics</resource>
-            <group id="general" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+            <resource>Basicrum_Analytics::basicrum_analytics</resource>
+            <group id="general" translate="label comment" type="text" sortOrder="10"
+                   showInDefault="1" showInWebsite="1" showInStore="1">
                 <label>General Settings</label>
-                <field id="logo" translate="label" type="text" sortOrder="0" showInDefault="1" showInWebsite="1" showInStore="1">
-                    <frontend_model>BasicRum\Analytics\Block\Adminhtml\System\Config\Logo</frontend_model>
-                    <label>BasicRum Logo</label>
-                    <comment>This field is used to display the BasicRum logo</comment>
+                <comment>Basicrum emits no storefront monitoring scripts unless it is enabled and the effective Beacon Endpoint and Brum Site ID are valid.</comment>
+                <field id="logo" translate="label" type="text" sortOrder="0"
+                       showInDefault="1" showInWebsite="1" showInStore="1">
+                    <frontend_model>Basicrum\Analytics\Block\Adminhtml\System\Config\Logo</frontend_model>
+                    <label>Basicrum Logo</label>
+                    <comment>This field displays the Basicrum logo.</comment>
                 </field>
-                <field id="enabled" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
-                    <label>Enable</label>
+                <field id="enabled" translate="label" type="select" sortOrder="10"
+                       showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Enable Basicrum</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>New installations are disabled. Enabling still requires valid identity settings below.</comment>
                 </field>
-                <field id="beacon_endpoint" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                <field id="monitoring_status" translate="label" type="note" sortOrder="15"
+                       showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Monitoring Status</label>
+                    <frontend_model>Basicrum\Analytics\Block\Adminhtml\System\Config\Status</frontend_model>
+                </field>
+                <field id="beacon_endpoint" translate="label comment" type="text" sortOrder="20"
+                       showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Beacon Endpoint</label>
+                    <backend_model>Basicrum\Analytics\Model\System\Config\Backend\BeaconEndpoint</backend_model>
+                    <comment>Valid HTTP or HTTPS collector URL without embedded credentials or a fragment. Endpoint query strings remain supported. Required when Basicrum is enabled. HTTP is upgraded to HTTPS unless the explicit development exception is enabled. The effective collector origin is added to storefront connect-src and img-src CSP policies while monitoring is active.</comment>
                 </field>
-                <field id="boomerang_version" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
-                    <label>Boomerang JS Version</label>
-                    <frontend_model>BasicRum\Analytics\Block\Adminhtml\System\Config\BoomerangVersion</frontend_model>
+                <field id="brum_site_id" translate="label comment" type="text" sortOrder="30"
+                       showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Brum Site ID</label>
+                    <backend_model>Basicrum\Analytics\Model\System\Config\Backend\BrumSiteId</backend_model>
+                    <comment>UUIDv4 copied from the Basicrum backoffice. Required when Basicrum is enabled.</comment>
+                </field>
+                <field id="boomerang_version" translate="label" type="text" sortOrder="40"
+                       showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Boomerang Version</label>
+                    <frontend_model>Basicrum\Analytics\Block\Adminhtml\System\Config\BoomerangVersion</frontend_model>
                 </field>
             </group>
-            <group id="consent" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
-                <label>Consent Settings</label>
-                <field id="enabled" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
-                    <label>Enable</label>
+            <group id="consent" translate="label comment" type="text" sortOrder="20"
+                   showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Visitor Consent</label>
+                <attribute type="expanded">1</attribute>
+                <comment>Basicrum does not show a consent banner or persist its own consent decision. Connect your site's consent tool with both public callbacks when consent is required.</comment>
+                <field id="enabled" translate="label comment" type="select" sortOrder="10"
+                       showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Require Consent Before Monitoring</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Yes keeps Boomerang unloaded until an allow callback on each page. No starts monitoring immediately; choose No only when deliberate and permitted.</comment>
                 </field>
-                <field id="mode" translate="label" type="select" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
-                    <label>Mode</label>
-                    <source_model>BasicRum\Analytics\Block\Adminhtml\System\Config\ConsentMode</source_model>
+                <field id="integration_help" translate="label" type="note" sortOrder="30"
+                       showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Manual Callback API</label>
+                    <frontend_model>Basicrum\Analytics\Block\Adminhtml\System\Config\ReadOnlyField</frontend_model>
+                    <comment><![CDATA[
+                        Call <code>window.OPT_IN_BASICRUM_LOADER_WRAPPER()</code> only after your consent tool authoritatively allows performance monitoring on the current page. Call <code>window.OPT_OUT_BASICRUM_LOADER_WRAPPER()</code> for denial, expiry, or withdrawal. A denial before loading may be followed by allow on the same page. After withdrawal during download or after initialization, reload before re-granting. Calls made before the footer loader registers these functions are not queued.
+                    ]]></comment>
                     <depends>
                         <field id="enabled">1</field>
                     </depends>
+                </field>
+            </group>
+            <group id="privacy" translate="label" type="text" sortOrder="30"
+                   showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Privacy</label>
+                <attribute type="expanded">1</attribute>
+                <field id="strip_query_string" translate="label comment" type="select" sortOrder="10"
+                       showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Strip Query Strings</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>When enabled, complete query strings in page, navigation, referrer, and resource URLs are replaced with ?qs-redacted before beacons are sent. URL paths remain.</comment>
+                </field>
+            </group>
+            <group id="performance" translate="label" type="text" sortOrder="40"
+                   showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Performance</label>
+                <field id="wait_after_onload" translate="label comment" type="select" sortOrder="10"
+                       showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Wait After Onload</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Delay the page-load beacon after onload. Disabled by default.</comment>
+                </field>
+                <field id="delay_ms" translate="label comment" type="text" sortOrder="20"
+                       showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Delay (milliseconds)</label>
+                    <validate>validate-number validate-zero-or-greater</validate>
+                    <backend_model>Basicrum\Analytics\Model\System\Config\Backend\WaitMilliseconds</backend_model>
+                    <comment>Zero disables the delay. Values are bounded to 30000 milliseconds (30 seconds).</comment>
+                    <depends>
+                        <field id="wait_after_onload">1</field>
+                    </depends>
+                </field>
+            </group>
+            <group id="developer" translate="label" type="text" sortOrder="50"
+                   showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Developer</label>
+                <field id="development_mode" translate="label comment" type="select" sortOrder="10"
+                       showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Allow HTTP Beacon Endpoint</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Development-only exception for local testing. Keep disabled on production stores so HTTP endpoints are upgraded to HTTPS.</comment>
                 </field>
             </group>
         </section>

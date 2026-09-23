@@ -1,8 +1,7 @@
 {
     "name": "basicrum/basicrum-analytics",
-    "description": "BasicRUM Analytics Magento 2 module",
+    "description": "Basicrum real user monitoring for Magento 2",
     "type": "magento2-module",
-    "version": "0.0.2",
     "authors": [
         {
             "name": "Tsvetan Stoychev",
@@ -10,13 +9,19 @@
         }
     ],
     "require": {
-        "php": "^8.1|^8.2|^8.3",
-        "magento/framework": "*",
-        "magento/module-store": "*"
+        "php": ">=8.2 <8.5",
+        "magento/framework": "^103.0",
+        "magento/module-backend": "^102.0",
+        "magento/module-config": "^101.2",
+        "magento/module-csp": "^100.4",
+        "magento/module-store": "^101.1"
     },
     "archive": {
         "exclude": [
-            ".github"
+            "/.github", "/.gitignore", "/.gitattributes", "/.test-results",
+            "/docs", "/tests", "/node_modules", "/vendor", "/test-results", "/playwright-report",
+            "/package.json", "/package-lock.json", "/playwright.config.js", "/playwright.integration.config.js",
+            "/phpstan.neon", "/phpcs.xml"
         ]
     },
     "repositories": [
@@ -26,11 +31,18 @@
         }
     ],
     "autoload": {
+        "exclude-from-classmap": [
+            "/tests/",
+            "/.test-results/",
+            "/node_modules/",
+            "/test-results/",
+            "/playwright-report/"
+        ],
         "files": [
             "registration.php"
         ],
         "psr-4": {
-            "BasicRum\\Analytics\\": ""
+            "Basicrum\\Analytics\\": ""
         }
     },
     "license": "MIT"

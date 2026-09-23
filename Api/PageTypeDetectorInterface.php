@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace BasicRum\Analytics\Api;
+namespace Basicrum\Analytics\Api;
 
 /**
  * Interface for page type detection service
