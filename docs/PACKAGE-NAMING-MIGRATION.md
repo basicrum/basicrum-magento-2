@@ -2,8 +2,13 @@
 
 ## Scope and identity
 
-This repository prepares the rename; it does not register, abandon, publish or
-delete any Packagist package, create a release tag, or approve a module license.
+The package identity is now `basicrum/basicrum-magento-2`. The naming change
+was merged and the new Packagist listing was registered on 2026-09-23.
+Packagist imported `dev-main` and historical tags successfully. Registration
+preceded `0.1.0` publication at the owner's request; until that tag is published,
+the latest stable version on the new listing is still the old `0.0.2` code.
+Publication and abandonment are separate maintainer actions, not effects of
+changing `composer.json`.
 
 | Surface | Canonical value |
 | --- | --- |
@@ -22,9 +27,10 @@ declaration and third-party notices are preserved.
 ## Composer decision
 
 The rename does not declare a conflict with `basicrum/basicrum-analytics`.
-While `main` still uses that old name, Composer's VCS importer assigns it to
-the rename branch too. An old-name conflict then becomes a self-conflict and
-Packagist rejects the branch, even though standalone `composer validate` passes.
+Before the naming change was merged, `main` still used that old name, and
+Composer's VCS importer assigned it to the rename branch too. An old-name
+conflict then became a self-conflict and Packagist rejected the branch,
+even though standalone `composer validate` passed.
 The initial PR declared that conflict; the Packagist update failure exposed this
 import-stage gap. CI now exercises Composer's validating VCS importer with both
 old-name and new-name default branches, the real candidate metadata, and a
@@ -44,10 +50,10 @@ Package names come from the default branch during VCS import. Composer can
 therefore expose historical tags under the new name without changing those
 tags. An unversioned `composer require` could select the old `0.0.2` code before
 the new release exists. The README uses `basicrum/basicrum-magento-2:^0.1`
-and explicitly makes installation conditional on publication of `0.1.0`.
+so that installation requires the new release rather than an old imported tag.
 Do not present `dev-main` or an imported `0.0.x` tag as the new stable release.
 
-## Maintainer checklist — not executed by this change
+## Maintainer checklist
 
 1. Merge the naming change into the repository's default branch, `main`.
    A feature branch alone does not establish the new Packagist identity.
@@ -55,13 +61,15 @@ Do not present `dev-main` or an imported `0.0.x` tag as the new stable release.
    update no longer rejects it for a self-conflict. If the hook has not retried,
    an authorized maintainer can trigger an update. Repeat the import check after
    merging; a local test does not certify the hosted updater's state.
-2. Before publishing `0.1.0`, obtain the owner's approval for the missing root
-   LICENSE text and run the release gate against the exact clean commit to be
-   tagged. CI success is not license approval. Keep the Composer `version`
-   field absent. Do not move, delete or reuse `0.0.1` or `0.0.2`.
-3. Publish the approved new `0.1.0` tag as a separate release action, **before
-   submitting the new Packagist listing**. Packagist's generated install command
-   has no version constraint and could otherwise select old `0.0.2` code.
+2. The owner approved the root MIT LICENSE and its 2025–2026 Tsvetan Stoychev
+   copyright line for `0.1.0`. Run the release gate against the exact clean
+   commit to be tagged; CI success alone is not release certification. Keep the
+   Composer `version` field absent. Do not move, delete or reuse `0.0.1` or `0.0.2`.
+3. Publish the approved new `0.1.0` tag as a separate release action. For a future
+   rename, publish the intended stable release before submitting the new listing:
+   Packagist's generated install command has no version constraint and can
+   otherwise select old code. This listing was registered first at the owner's
+   request; verify that `0.1.0` supersedes `0.0.2` before abandoning the old name.
 4. As an authorized `basicrum` maintainer, submit the same repository URL to
    Packagist under `basicrum/basicrum-magento-2`. Configure/verify its GitHub
    update hook and trigger an update if needed. Do not assume updating the old

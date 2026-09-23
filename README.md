@@ -24,18 +24,17 @@ verification scope, skips, and remaining release requirements.
 
 ## Installation
 
-The Composer package is being renamed to `basicrum/basicrum-magento-2`.
-This source change does not register the new Packagist listing or publish a
-release. After the new package's `0.1.0` release is published, install it with:
+Install Basicrum Analytics from the
+[`basicrum/basicrum-magento-2`](https://packagist.org/packages/basicrum/basicrum-magento-2)
+Composer package:
 
 ```sh
 composer require 'basicrum/basicrum-magento-2:^0.1'
 ```
 
 The version constraint deliberately excludes the historical `0.0.x` releases,
-which may also appear under the new name when Packagist imports the repository.
-Do not drop the constraint to make an unpublished release install. Until
-`0.1.0` is available, use a reviewed source checkout for development only.
+which also appear under the new name when Packagist imports the repository.
+Those older versions do not contain the `0.1.0` implementation.
 See the [package migration checklist](https://github.com/basicrum/basicrum-magento-2/blob/main/docs/PACKAGE-NAMING-MIGRATION.md)
 for the separate maintainer steps and existing-installation considerations.
 
@@ -330,7 +329,6 @@ The reviewed Boomerang 1.815.60 artifact and loader provenance, checksum, and
 BSD license are recorded in `THIRD-PARTY-NOTICES.txt` and
 `view/frontend/web/js/boomr/LICENSE.txt`.
 
-The existing Composer metadata declares this module as MIT. This repository
-still does not contain an approved module-level license text; that pre-existing
-distribution gap must be resolved by the rights holder before release. Phase 1
-does not silently relicense the module.
+The module is licensed under the [MIT License](LICENSE), matching its existing
+Composer declaration. The root license does not replace the bundled Boomerang
+BSD license or other third-party notices.

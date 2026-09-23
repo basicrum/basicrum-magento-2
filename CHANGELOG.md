@@ -2,10 +2,12 @@
 
 Notable changes to Basicrum Analytics are recorded here.
 
-## [Unreleased]
+## [0.1.0] - 2026-09-23
 
 ### Added
 
+- The owner-approved root MIT license, matching the existing Composer license
+  declaration and preserving bundled third-party notices.
 - Magento-aware PHPStan level 8, Magento coding standards, precise runtime
   configuration types, and lowest/stable component-dependency CI checks.
 - Magento-version/image-pinned Mage-OS-mirror native test stack, production ZIP verification,
@@ -35,8 +37,8 @@ Notable changes to Basicrum Analytics are recorded here.
   because VCS imports under the old default-branch name reject it as a self-conflict.
   Remove the old package explicitly; Composer does not prevent co-installation.
   Magento module/namespace/ACL identifiers and configuration paths are unchanged
-  by this packaging change. Packagist registration and release publication are
-  separate, pending maintainer steps; historical tags are not rewritten.
+  by this packaging change. The new Packagist listing uses the same repository;
+  historical tags are not rewritten.
 - **Breaking:** Magento 2 `p_type` now uses Magento 1's exact 27 named labels
   for equivalent native pages, including `Checkout Success`, account/address,
   wishlist, guest-order, and PayPal billing-agreement pages. HTTP 404 takes
@@ -52,8 +54,8 @@ Notable changes to Basicrum Analytics are recorded here.
   This pre-release break was accepted because the extension has no
   installations to migrate.
 - Removed the explicit Composer package version. Release versions now come
-  from immutable VCS tags. The breaking rename remains unreleased and requires
-  a new `0.1.0` tag rather than reuse of `0.0.2`.
+  from immutable VCS tags. This breaking release uses the new `0.1.0` tag
+  rather than reusing `0.0.2`.
 - Production HTTP Beacon Endpoints normalize to HTTPS; the explicit
   development exception preserves HTTP.
 - The reviewed Boomerang 1.815.60 artifact and configuration now emit
@@ -119,7 +121,7 @@ Notable changes to Basicrum Analytics are recorded here.
 - There is no configuration data migration. Existing enabled stores remain
   inactive until the new required Brum Site ID is valid.
 - Automatic consent-provider adapters, full-page-cache invalidation analysis,
-  a broad optimizer matrix, release publishing, and the
+  a broad optimizer matrix, and the
   central parity ledger's D-002 through D-004 items remain deferred. D-001's
   Magento 2-to-Magento 1 label alignment is now implemented; a shared
   cross-platform taxonomy and historical reporting migration remain deferred.

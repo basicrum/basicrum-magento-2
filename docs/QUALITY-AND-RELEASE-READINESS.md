@@ -222,10 +222,11 @@ full application dependency closure. Provisioning still resolves transitive
 Composer dependencies; upstream updates/advisories can change or block a fresh
 install. No bit-for-bit reproducibility or committed application lock is claimed.
 
-The existing Composer MIT declaration is unchanged. A rights-holder-approved
-root LICENSE still needs the owner's copyright holder/year confirmation; no
-approval or legal ownership has been invented. This remains a release blocker,
-not a technical-test failure.
+The existing Composer MIT declaration is unchanged. For the `0.1.0` release,
+the owner approved the root MIT LICENSE with the copyright line
+“Copyright (c) 2025–2026 Tsvetan Stoychev”. The root file is included in the
+production archive's verification boundary; bundled third-party notices remain unchanged.
+This resolves the license-text blocker recorded during the earlier reviews.
 
 The execution evidence above was collected before committing or pushing the
 pipeline implementation. Final release certification must be rerun against the exact clean commit to be tagged;
