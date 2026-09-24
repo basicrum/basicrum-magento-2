@@ -16,7 +16,7 @@ jobs:
         run: |
           docker compose -f tests/integration/docker/compose.yaml exec -T -w /module php sh tests/integration/build-artifact.sh
           docker compose -f tests/integration/docker/compose.yaml exec -T php sh /module/tests/integration/docker/install-artifact.sh
-          docker compose -f tests/integration/docker/compose.yaml exec -T -w /module -e BASICRUM_RELEASE_TAG=0.1.0 php sh tests/integration/release-gate.sh
+          docker compose -f tests/integration/docker/compose.yaml exec -T -w /module -e BASICRUM_RELEASE_TAG=0.1.1 php sh tests/integration/release-gate.sh
       - name: Stop only this disposable stack
         if: always()
         run: docker compose -f tests/integration/docker/compose.yaml down
