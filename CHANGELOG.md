@@ -2,10 +2,12 @@
 
 Notable changes to Basicrum Analytics are recorded here.
 
-## [0.1.0] - 2026-09-23
+## [0.1.0] - 2026-09-24
 
 ### Added
 
+- Illustrated setup instructions for collector details, Magento configuration,
+  consent integration, and query-string privacy controls.
 - The owner-approved root MIT license, matching the existing Composer license
   declaration and preserving bundled third-party notices.
 - Magento-aware PHPStan level 8, Magento coding standards, precise runtime
@@ -43,7 +45,7 @@ Notable changes to Basicrum Analytics are recorded here.
   page, keeping their settings and guidance immediately visible.
 - **Breaking:** normalized the technical Magento module identifier and PHP
   namespace to the “Basicrum” spelling: `Basicrum_Analytics` and
-  `Basicrum\\Analytics`. The lowercase configuration paths remain unchanged.
+  `Basicrum\Analytics`. The lowercase configuration paths remain unchanged.
   This pre-release break was accepted because the extension has no
   installations to migrate.
 - Removed the explicit Composer package version. Release versions now come
@@ -69,6 +71,11 @@ Notable changes to Basicrum Analytics are recorded here.
 
 ### Fixed
 
+- Remove obsolete consent-cookie cleanup from the readable and minified
+  loaders. Browser tests verify no cookies before consent and only the `RT`
+  measurement cookie after initialization.
+- Clarify automatic Beacon Endpoint origin registration in storefront CSP and
+  the cache refresh required after configuration changes.
 - The Admin integration test opens Magento's native Basicrum navigation group
   before selecting the exact settings link, which is hidden when collapsed.
 - Validate package metadata through Composer's validating VCS importer in CI,

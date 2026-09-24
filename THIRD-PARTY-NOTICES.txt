@@ -38,5 +38,5 @@ The Boomerang copyright notice and BSD license remain applicable to this file.
   `64f19d9e5a9fbe580c12c19796e86e3ad0dd17ff`
 
 The consent wrapper adds Basicrum lifecycle, withdrawal, wait cancellation,
-and legacy-cookie cleanup around the loader. Those adaptations do not change
+and measurement-cookie cleanup around the loader. Those adaptations do not change
 the license that applies to the original loader snippet.

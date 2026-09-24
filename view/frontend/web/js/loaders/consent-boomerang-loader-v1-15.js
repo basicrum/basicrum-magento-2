@@ -202,7 +202,7 @@
     /* END BASICRUM STANDARD LOADER */
   };
 
-  // Remove cookies created by older Basicrum consent loaders and Boomerang.
+  // Remove Boomerang measurement cookies.
   function removeCookie(name) {
     var hostname = mainWin.location && mainWin.location.hostname;
     var cookie = name + "=; path=/; max-age=0; SameSite=Strict";
@@ -248,14 +248,10 @@
       if (mainWin.BOOMR.utils && typeof mainWin.BOOMR.utils.removeCookie === "function") {
         mainWin.BOOMR.utils.removeCookie("RT");
         mainWin.BOOMR.utils.removeCookie("BA");
-        mainWin.BOOMR.utils.removeCookie("BRUM_CONSENT");
-        mainWin.BOOMR.utils.removeCookie("BOOMR_CONSENT");
       }
     }
 
     removeCookie("RT");
     removeCookie("BA");
-    removeCookie("BRUM_CONSENT");
-    removeCookie("BOOMR_CONSENT");
   };
 })(window);

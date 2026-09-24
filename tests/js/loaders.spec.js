@@ -67,7 +67,7 @@ async function preparePage(page, options = {}) {
   if (options.cookies) {
     await page.context().addCookies(options.cookies.map((name) => ({
       name,
-      value: "legacy",
+      value: "existing",
       domain: "shop.example.test",
       path: "/"
     })));
@@ -139,8 +139,8 @@ for (const consentLoader of [
   "consent-boomerang-loader-v1-15.min.js"
 ]) {
   test.describe(`consent wrapper: ${consentLoader}`, () => {
-    test("stays inert despite a legacy allow cookie", async ({ page }) => {
-      const harness = await preparePage(page, { cookies: ["BRUM_CONSENT"] });
+    test("stays inert despite existing measurement cookies", async ({ page }) => {
+      const harness = await preparePage(page, { cookies: ["RT", "BA"] });
       await page.addScriptTag({ path: loaderPath(consentLoader) });
       await page.waitForTimeout(200);
 
@@ -179,7 +179,7 @@ for (const consentLoader of [
     });
 
     test("denial before loading cleans cookies and permits a later allow", async ({ page }) => {
-      const cookieNames = ["RT", "BA", "BRUM_CONSENT", "BOOMR_CONSENT"];
+      const cookieNames = ["RT", "BA"];
       await preparePage(page, { cookies: cookieNames });
       await page.addScriptTag({ path: loaderPath(consentLoader) });
       await page.evaluate(() => window.OPT_OUT_BASICRUM_LOADER_WRAPPER());
@@ -214,7 +214,7 @@ for (const consentLoader of [
     });
 
     test("withdrawal after initialization disables collection and clears cookies", async ({ page }) => {
-      const cookieNames = ["RT", "BA", "BRUM_CONSENT", "BOOMR_CONSENT"];
+      const cookieNames = ["RT", "BA"];
       await preparePage(page, { cookies: cookieNames });
       await page.addScriptTag({ path: loaderPath(consentLoader) });
       await page.evaluate(() => window.OPT_IN_BASICRUM_LOADER_WRAPPER());
@@ -233,7 +233,7 @@ for (const consentLoader of [
         executions: 1,
         disableCalls: 1,
         cookies: "",
-        removals: ["BA", "BOOMR_CONSENT", "BRUM_CONSENT", "RT"]
+        removals: ["BA", "RT"]
       });
     });
   });
