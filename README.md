@@ -62,29 +62,39 @@ headless/PWA storefronts, Varnish, and third-party optimizers are not verified.
 
 ## Configuration
 
+### Get your collector details
+
+In the [Basicrum portal](https://app.beta.basicrum.com/), open
+**Account > Settings > Sites**. Choose **Add Site** or an existing site, then
+copy its **Beacon Endpoint** and **Brum Site ID**. Use your own site's values;
+the screenshots show an example.
+
+![Basicrum portal showing the site's Brum Site ID and Beacon Endpoint](docs/images/collector-details.png)
+
+### Enable Basicrum in Magento
+
 Open **Stores > Configuration > Basicrum > Basicrum Analytics**. Settings support
 Magento default, website, and store inheritance.
+
+Set **Enable Basicrum** to **Yes**, enter your collector details, and click
+**Save Config**. Consent is still required by default.
+
+![Basicrum Analytics enabled in Magento Admin with collector details and monitoring status](docs/images/plugin-settings.png)
 
 Required settings:
 
 - **Enable Basicrum**: new installations default to No.
 - **Beacon Endpoint**: a valid HTTP or HTTPS collector URL without embedded
-  credentials or a fragment. Endpoint query strings remain supported for
-  compatibility. HTTPS is enforced unless the explicit development exception
-  is enabled.
+  credentials or a fragment. Endpoint query strings are supported. HTTPS is
+  enforced unless the explicit development exception is enabled.
 - **Brum Site ID**: a UUIDv4 copied from the Basicrum backoffice.
 
 If Basicrum is disabled or required configuration is missing or invalid, no
 monitoring scripts are emitted. The Monitoring Status row explains why
 monitoring is inactive. Settings are validated on save and at runtime.
 
-Collection controls:
+### Other collection settings
 
-- **Require Consent Before Monitoring** defaults to Yes. Select No only for a
-  deliberate immediate-loading policy.
-- **Strip Query Strings** defaults to No. When enabled, Boomerang replaces
-  complete query strings in page, navigation, referrer, and resource URLs with
-  `?qs-redacted` before beacon transmission.
 - **Wait After Onload** defaults to No with a zero delay. Its configured delay
   is bounded to 30,000 milliseconds.
 - **Allow HTTP Beacon Endpoint** defaults to No and is intended only for local
@@ -100,6 +110,13 @@ Unmapped actions use `unmapped_<lowercase full action name>`; an unavailable
 action uses `unknown`.
 
 ## Consent integration
+
+Under **Visitor Consent**, **Require Consent Before Monitoring** defaults to
+**Yes**. Boomerang, measurement cookies, and beacons wait for your consent tool
+to allow monitoring on each page. Select **No** only for a deliberate
+immediate-loading policy.
+
+![Visitor Consent settings showing required consent and the manual callback API](docs/images/visitor-consent-settings.png)
 
 Basicrum provides manual, page-level callbacks for your consent platform.
 It does not display a banner, automatically connect to consent providers,
@@ -123,19 +140,27 @@ if (typeof window.OPT_OUT_BASICRUM_LOADER_WRAPPER === "function") {
 ```
 
 The consent wrapper is inert until allow. Repeated allow calls load Boomerang
-at most once. Denial before the first allow cleans measurement and legacy
-consent cookies without preventing a later allow on that page. Withdrawal
-during download prevents the arriving bundle from initializing. Withdrawal
-after initialization disables further collection, cancels a pending Wait After
-Onload timer, and removes `RT`, `BA`, `BRUM_CONSENT`, and `BOOMR_CONSENT`
-cookies where JavaScript can reach them. Data already transmitted cannot be
-retracted.
+at most once. Once initialized, Boomerang uses the first-party `RT` measurement
+cookie; Basicrum does not create a consent cookie. Denial before the first allow
+does not prevent a later allow on that page. Withdrawal during download prevents
+the arriving bundle from initializing. Withdrawal after initialization disables
+further collection, cancels a pending Wait After Onload timer, and removes
+accessible measurement cookies. Data already transmitted cannot be retracted.
 
 After withdrawal once loading has started, re-grant requires a page reload.
 This intentionally prevents a same-page restart from a partially initialized
 state. The callbacks are registered by the footer loader; calls made before
 registration are not queued. Connect both allow and deny/change events in the
 site's consent tool on every page.
+
+## Strip query strings
+
+Under **Privacy**, set **Strip Query Strings** to **Yes** to redact queries
+from page, navigation, referrer, and resource URLs. The default is **No**.
+For example, `/search?q=boots` becomes `/search?qs-redacted`; URL paths remain.
+This does not change query parameters in your configured Beacon Endpoint.
+
+![Privacy settings with Strip Query Strings enabled](docs/images/strip-query-strings-settings.png)
 
 ## Caching and CSP
 
@@ -145,13 +170,21 @@ new static assets and invalidate any CDN or optimizer cache that can retain old
 HTML or JavaScript. Magento's versioned static asset URLs provide browser cache
 invalidation only after the deployment/content version changes.
 
+Then visit the storefront, grant consent through your consent tool, and check
+the browser's Network panel for a beacon to your endpoint containing your
+`brum_site_id`. With consent required, no beacon should appear before opt-in.
+
 The loader and Boomerang are first-party Magento static assets. Inline scripts
 use Magento's `SecureHtmlRenderer` for CSP-compatible rendering.
 
-When monitoring configuration is active and valid, Basicrum adds the Beacon
-Endpoint origin (scheme, host, and optional port) to storefront `connect-src`
-and `img-src` CSP policies. Paths and query strings are excluded. Disabled or
-invalid configuration adds no collector origin. No wildcard is added.
+When you configure the **Beacon Endpoint** in Magento Admin and enable Basicrum
+with valid settings, the module automatically allows the endpoint's domain in
+the storefront `connect-src` and `img-src` CSP directives. No separate manual
+CSP whitelist entry is needed for that endpoint. The allowed value is its origin
+(scheme, host, and optional port), not the full URL: paths and query strings are
+excluded. Disabled or invalid configuration adds no collector origin, and no
+wildcard is added. Clean the caches described above after saving settings so
+cached storefront responses use the updated policy.
 
 If your store uses script delay, combination, or other optimization extensions,
 verify consent handling and script loading on staging before deployment.

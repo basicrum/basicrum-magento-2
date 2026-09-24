@@ -180,7 +180,7 @@ for (const consentLoader of [
       await page.waitForTimeout(300);
       expect(gate.boomerangRequests()).toBe(0);
       expect(gate.beaconRequests()).toBe(0);
-      expect((await context.cookies(shopUrl)).some((cookie) => ["RT", "BA"].includes(cookie.name))).toBe(false);
+      expect(await context.cookies(shopUrl)).toEqual([]);
 
       await page.evaluate(() => {
         window.OPT_IN_BASICRUM_LOADER_WRAPPER();
@@ -194,8 +194,7 @@ for (const consentLoader of [
       const parameters = requestParameters(gate.beaconRequestData()[0]);
       expect(parameters.get("p_gen")).toBe("mage2");
       expect(parameters.get("brum_site_id")).toBe(siteId);
-      expect((await context.cookies(shopUrl)).some((cookie) => cookie.name === "RT")).toBe(true);
-      expect((await context.cookies(shopUrl)).some((cookie) => cookie.name === "BRUM_CONSENT")).toBe(false);
+      expect((await context.cookies(shopUrl)).map((cookie) => cookie.name).sort()).toEqual(["RT"]);
     });
 
     test("denial before loading remains eligible for a later allow", async ({ page }) => {
