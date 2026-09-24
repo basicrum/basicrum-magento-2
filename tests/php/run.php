@@ -415,15 +415,19 @@ $tests['disposable integration guard accepts an enabled canonical module'] = fun
     basicrum_assert_not_contains('configuration mutation', $missingRunner['stderr'], 'no mutation without the runner');
 };
 
-$tests['native release gate requires a new 0.1.0 tag identity'] = function () use ($runReleaseGateGuard): void {
-    $oldTag = $runReleaseGateGuard('0.0.2');
-    basicrum_assert_same(1, $oldTag['status'], 'previous release tag must fail');
-    basicrum_assert_contains('0.0.2 must not be reused', $oldTag['stderr'], 'actionable old-tag error');
-    basicrum_assert_not_contains('MAGENTO_ROOT', $oldTag['stderr'], 'old tag fails before native work');
+$tests['native release gate accepts only the new 0.1.1 tag identity'] = function () use ($runReleaseGateGuard): void {
+    foreach (['', '0.0.2', '0.1.0', 'v0.1.0', '0.1.2', '0.1.1-rc1', 'not-a-version'] as $tag) {
+        $rejected = $runReleaseGateGuard($tag);
+        basicrum_assert_same(1, $rejected['status'], 'unsupported release tag must fail: ' . $tag);
+        basicrum_assert_contains('must be 0.1.1 (or v0.1.1)', $rejected['stderr'], 'actionable tag error');
+        basicrum_assert_not_contains('MAGENTO_ROOT', $rejected['stderr'], 'tag fails before native work');
+    }
 
-    $phaseOneTag = $runReleaseGateGuard('0.1.0');
-    basicrum_assert_same(1, $phaseOneTag['status'], 'missing Magento root must still fail closed');
-    basicrum_assert_contains('MAGENTO_ROOT must point', $phaseOneTag['stderr'], '0.1.0 passes the tag guard');
+    foreach (['0.1.1', 'v0.1.1'] as $tag) {
+        $accepted = $runReleaseGateGuard($tag);
+        basicrum_assert_same(1, $accepted['status'], 'missing Magento root must still fail closed');
+        basicrum_assert_contains('MAGENTO_ROOT must point', $accepted['stderr'], $tag . ' passes the tag guard');
+    }
 };
 
 $tests['native release gate stops before mutations when identity or baseline checks fail'] = function () use ($runReleaseGateGuard): void {
@@ -472,15 +476,15 @@ SH);
             'MAGENTO_ADMIN_USERNAME' => 'synthetic',
             'MAGENTO_ADMIN_PASSWORD' => 'synthetic',
         ];
-        $artifactMismatch = $runReleaseGateGuard('0.1.0', $environment + ['BASICRUM_FAKE_ARTIFACT_MISMATCH' => '1']);
+        $artifactMismatch = $runReleaseGateGuard('0.1.1', $environment + ['BASICRUM_FAKE_ARTIFACT_MISMATCH' => '1']);
         basicrum_assert_same(67, $artifactMismatch['status'], 'artifact mismatch propagates');
         basicrum_assert_not_contains('unexpected Magento mutation', $artifactMismatch['stderr'], 'no mutation on artifact mismatch');
-        $mismatched = $runReleaseGateGuard('0.1.0', $environment + ['BASICRUM_FAKE_SOURCE_MISMATCH' => '1']);
+        $mismatched = $runReleaseGateGuard('0.1.1', $environment + ['BASICRUM_FAKE_SOURCE_MISMATCH' => '1']);
         basicrum_assert_same(68, $mismatched['status'], 'installed candidate mismatch propagates');
         basicrum_assert_contains('installed candidate mismatch', $mismatched['stderr'], 'installed identity was checked');
         basicrum_assert_not_contains('baseline rejected', $mismatched['stderr'], 'identity fails before native baseline bootstrap');
         basicrum_assert_not_contains('unexpected Magento mutation', $mismatched['stderr'], 'no mutation on identity mismatch');
-        $result = $runReleaseGateGuard('0.1.0', $environment);
+        $result = $runReleaseGateGuard('0.1.1', $environment);
         basicrum_assert_same(69, $result['status'], 'baseline failure propagates');
         basicrum_assert_contains('check-baseline.php', $result['stderr'], 'baseline check was executed');
         basicrum_assert_not_contains('unexpected Magento mutation', $result['stderr'], 'no native mutation ran');

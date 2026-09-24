@@ -48,7 +48,7 @@ From a clean committed checkout with the containers running:
 docker compose -f tests/integration/docker/compose.yaml exec -T -w /module php sh tests/integration/build-artifact.sh
 docker compose -f tests/integration/docker/compose.yaml exec -T -w /module php php tests/integration/test-artifact.php
 docker compose -f tests/integration/docker/compose.yaml exec -T php sh /module/tests/integration/docker/install-artifact.sh
-docker compose -f tests/integration/docker/compose.yaml exec -T -w /module -e BASICRUM_RELEASE_TAG=0.1.0 php sh tests/integration/release-gate.sh
+docker compose -f tests/integration/docker/compose.yaml exec -T -w /module -e BASICRUM_RELEASE_TAG=0.1.1 php sh tests/integration/release-gate.sh
 docker compose -f tests/integration/docker/compose.yaml down
 ```
 
@@ -280,18 +280,21 @@ fixture is not evidence of end-to-end verification for that page.
 
 ## Required pre-release native gate
 
-The `0.0.2` identity must not be reused for this breaking, previously
-unreleased technical-namespace change. The Phase 1 release candidate is
-`0.1.0`, and the guarded release script accepts only `0.1.0` (with an optional
-`v` tag prefix). Change that explicit policy in review if the intended release
-number changes; do not bypass the gate or add a Composer `version` field.
+The release candidate is `0.1.1`, and the guarded release script accepts only
+`0.1.1` (with an optional `v` tag prefix). The withdrawn `0.1.0` and earlier
+published versions must not be reused. Packagist permanently locks a stable
+version's source and distribution references, even after a maintainer deletes
+the version; see its [version immutability policy](https://packagist.org/about/version-immutability).
+Change the explicit gate policy, regression tests, and CI invocation together
+when preparing another release. Do not bypass the gate or add a Composer
+`version` field.
 
 Before creating the tag, first require the fast CI jobs to pass, then run the
 following against the pinned disposable Magento baseline:
 
 ```sh
 BASICRUM_DISPOSABLE_MAGENTO=1 \
-BASICRUM_RELEASE_TAG=0.1.0 \
+BASICRUM_RELEASE_TAG=0.1.1 \
 MAGENTO_ROOT=/absolute/path/to/disposable-magento \
 MAGENTO_STOREFRONT_URL=https://magento.test/ \
 MAGENTO_ADMIN_URL=https://magento.test/admin/ \

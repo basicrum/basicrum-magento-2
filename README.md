@@ -16,10 +16,10 @@ Install Basicrum Analytics from the
 Composer package:
 
 ```sh
-composer require 'basicrum/basicrum-magento-2:^0.1'
+composer require 'basicrum/basicrum-magento-2:^0.1.1'
 ```
 
-The version constraint selects the `0.1.x` release line.
+The constraint selects `0.1.1` or a newer `0.1.x` release.
 
 Alternatively, for a manual source installation, place this module at the exact
 path below. The casing is required on case-sensitive filesystems:

@@ -6,8 +6,8 @@ if [ "${BASICRUM_DISPOSABLE_MAGENTO:-}" != "1" ]; then
     exit 1
 fi
 
-if [ "${BASICRUM_RELEASE_TAG:-}" != "0.1.0" ] && [ "${BASICRUM_RELEASE_TAG:-}" != "v0.1.0" ]; then
-    echo "BASICRUM_RELEASE_TAG must be the new Phase 1 tag 0.1.0 (or v0.1.0); 0.0.2 must not be reused." >&2
+if [ "${BASICRUM_RELEASE_TAG:-}" != "0.1.1" ] && [ "${BASICRUM_RELEASE_TAG:-}" != "v0.1.1" ]; then
+    echo "BASICRUM_RELEASE_TAG must be 0.1.1 (or v0.1.1); published versions, including withdrawn 0.1.0, must not be reused." >&2
     exit 1
 fi
 

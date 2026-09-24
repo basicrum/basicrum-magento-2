@@ -2,12 +2,34 @@
 
 Notable changes to Basicrum Analytics are recorded here.
 
-## [0.1.0] - 2026-09-24
+## [0.1.1] - 2026-09-24
 
 ### Added
 
 - Illustrated setup instructions for collector details, Magento configuration,
   consent integration, and query-string privacy controls.
+
+### Changed
+
+- Prepare `0.1.1` as the next release after withdrawing `0.1.0`. Published
+  Packagist versions are immutable and must not be replaced by moved tags.
+- Update the native release gate, CI, and regression tests for `0.1.1`, rejecting
+  withdrawn and other unsupported release identities before native work.
+- Require `^0.1.1` in the installation instructions, keeping Composer versions
+  derived from VCS tags rather than a hardcoded package version.
+
+### Fixed
+
+- Remove obsolete consent-cookie cleanup from the readable and minified
+  loaders. Browser tests verify no cookies before consent and only the `RT`
+  measurement cookie after initialization.
+- Clarify automatic Beacon Endpoint origin registration in storefront CSP and
+  the cache refresh required after configuration changes.
+
+## [0.1.0] - 2026-09-23 (withdrawn)
+
+### Added
+
 - The owner-approved root MIT license, matching the existing Composer license
   declaration and preserving bundled third-party notices.
 - Magento-aware PHPStan level 8, Magento coding standards, precise runtime
@@ -71,11 +93,6 @@ Notable changes to Basicrum Analytics are recorded here.
 
 ### Fixed
 
-- Remove obsolete consent-cookie cleanup from the readable and minified
-  loaders. Browser tests verify no cookies before consent and only the `RT`
-  measurement cookie after initialization.
-- Clarify automatic Beacon Endpoint origin registration in storefront CSP and
-  the cache refresh required after configuration changes.
 - The Admin integration test opens Magento's native Basicrum navigation group
   before selecting the exact settings link, which is hidden when collapsed.
 - Validate package metadata through Composer's validating VCS importer in CI,
