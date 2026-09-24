@@ -30,15 +30,8 @@ Notable changes to Basicrum Analytics are recorded here.
 
 ### Changed
 
-- **Breaking packaging change:** the Composer name is now
-  `basicrum/basicrum-magento-2`, retaining the public title "Basicrum Analytics"
-  and distribution filename `basicrum-magento-2.zip`. No compatibility
-  replacement is declared. The old-name conflict is omitted during the rename
-  because VCS imports under the old default-branch name reject it as a self-conflict.
-  Remove the old package explicitly; Composer does not prevent co-installation.
-  Magento module/namespace/ACL identifiers and configuration paths are unchanged
-  by this packaging change. The new Packagist listing uses the same repository;
-  historical tags are not rewritten.
+- The Composer package is `basicrum/basicrum-magento-2`, with the public title
+  "Basicrum Analytics" and distribution filename `basicrum-magento-2.zip`.
 - **Breaking:** Magento 2 `p_type` now uses Magento 1's exact 27 named labels
   for equivalent native pages, including `Checkout Success`, account/address,
   wishlist, guest-order, and PayPal billing-agreement pages. HTTP 404 takes
@@ -78,8 +71,8 @@ Notable changes to Basicrum Analytics are recorded here.
 
 - The Admin integration test opens Magento's native Basicrum navigation group
   before selecting the exact settings link, which is hidden when collapsed.
-- Validate rename branches through Composer's validating VCS importer in CI,
-  including the pre-merge old-name default branch that root validation misses.
+- Validate package metadata through Composer's validating VCS importer in CI,
+  catching import-stage errors that standalone validation misses.
 - Rebuild the disposable Magento catalog search index before native browser
   checks, including when retained application/database volumes outlive OpenSearch data.
 - Fresh disposable Magento provisioning no longer writes the Admin Usage setting
