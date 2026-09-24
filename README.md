@@ -4,6 +4,22 @@ Basicrum adds Boomerang real user monitoring (RUM) to a Magento 2 storefront.
 Collect performance data through your Basicrum Beacon Endpoint, with
 consent-controlled loading and configurable privacy settings.
 
+## Acknowledgements
+
+Basicrum grows through its community. Thank you to everyone who shared their
+time, knowledge, and feedback to help shape this module:
+
+- [Louis de Looze](https://www.linkedin.com/in/louis-de-looze/) — for self-hosting
+  an early Basicrum version, trying the Magento 2 extension, and sharing feedback.
+- [Jeroen Boersma](https://www.linkedin.com/in/jeroenboersma/) — for guidance and
+  teaching during the initial Content Security Policy (CSP) implementation.
+- [Jisse Reitsma](https://www.linkedin.com/in/jissereitsma/) — for helping shape
+  the original extension structure around Magento best practices.
+- [Ruud van Zuidam](https://www.linkedin.com/in/ruudvanzuidam/) — for contributing
+  best practices, logic fixes, and improvements to CSP support.
+- The participants of Magento Unconference Netherlands — for sharing what they
+  wanted from a Magento 2 monitoring extension.
+
 ## Installation
 
 Run commands from your Magento installation directory as the filesystem owner.
