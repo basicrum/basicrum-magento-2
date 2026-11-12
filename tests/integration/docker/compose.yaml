@@ -1,4 +1,5 @@
-name: basicrum-release-baseline
+# Keep the previous Magento 2.4.7/MariaDB 10.11 volumes untouched.
+name: basicrum-release-baseline-248
 services:
   php:
     build: .
@@ -19,7 +20,7 @@ services:
       search:
         condition: service_healthy
   web:
-    image: markoshust/magento-nginx:1.28-0@sha256:12d211176a5800ef1ebdc909865a0a5ebc691d282a6df438b082ac5587f275de
+    image: nginx:1.30.6-alpine@sha256:583b7f2fce1cdb8da5ad5c39ebd3c33b98b87d493190e548bdee1fa8c619c311
     ports:
       - '127.0.0.1:9443:8443'
     volumes:
@@ -29,7 +30,7 @@ services:
     depends_on:
       - php
   db:
-    image: mariadb:10.11@sha256:07c0aaff7396b74cb7975cba78257178d188e30f531a5db2b617c48beef13c41
+    image: mariadb:11.4@sha256:5e73baf8179b29f115101bb102763a47a017361f3e9792daccba6646c3ab1532
     environment:
       MARIADB_DATABASE: magento
       MARIADB_USER: magento
@@ -42,7 +43,7 @@ services:
       interval: 5s
       retries: 30
   search:
-    image: opensearchproject/opensearch:2.19.4@sha256:9e0b3b3b6805811bd63d9b9503ffe34a58ba33d03cc346000e318c6ff5c05bd9
+    image: opensearchproject/opensearch:3.4.0@sha256:1647ce2e07371f1ac8bbad28890a64ef77c5a694a61f656120f0ace09e66bf48
     environment:
       discovery.type: single-node
       DISABLE_SECURITY_PLUGIN: 'true'

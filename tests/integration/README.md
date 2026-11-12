@@ -1,16 +1,19 @@
 # Disposable Magento integration check
 
-The declared Phase 1 baseline is pinned in `baseline.env`: Magento Open Source
-2.4.7-p10 on PHP 8.3, with the listed Composer, MariaDB, and OpenSearch lines.
-Adobe's current system-requirements table lists PHP 8.2 and 8.3 for the 2.4.7
-release line. This is a baseline, not a claim that every patch or platform
-combination has been verified.
+The baseline is pinned in `baseline.env`: Magento Open Source 2.4.8-p5 on PHP
+8.3, Composer 2.10, MariaDB 11.4, and OpenSearch 3.4. The web server is nginx
+1.30. These versions follow [Adobe's system requirements](https://experienceleague.adobe.com/en/docs/commerce-operations/installation-guide/system-requirements).
+This is a baseline, not a claim that every patch or platform combination has
+been verified. Magento 2.4.7-p10 requires Flysystem 2, which cannot resolve past
+[GHSA-cxf4-7mrp-vvpr](https://github.com/thephpleague/flysystem/security/advisories/GHSA-cxf4-7mrp-vvpr).
+The 2.4.8 line permits the patched Flysystem 3 versions; Composer's security
+blocking remains enabled without advisory exceptions.
 
 ## Magento-version/image-pinned local/CI stack
 
 `sh tests/integration/docker/start.sh` creates the dedicated Compose project
-`basicrum-release-baseline` using pinned image digests and the anonymous Mage-OS
-mirror. It provisions exactly 2.4.7-p10, installs the pinned Playwright runner,
+`basicrum-release-baseline-248` using pinned image digests and the anonymous Mage-OS
+mirror. It provisions exactly 2.4.8-p5, installs the pinned Playwright runner,
 and leaves existing Magento stacks alone. Docker, Compose, OpenSSL and several
 GB of disk/RAM are required. Provisioning refuses to overwrite an installed
 application; reuse it with the commands below, not `start.sh` again.
@@ -18,6 +21,10 @@ The full Magento Composer dependency closure is **not** locked in this repositor
 Fresh provisioning resolves transitive dependencies from the mirror; upstream
 releases/advisories can change that resolution or make installation fail. Image
 digests and the Magento version pin do not promise bit-for-bit reproducibility.
+The new Compose project name also gives this baseline fresh application/database
+volumes. Existing `basicrum-release-baseline` volumes from 2.4.7 are retained and
+never opened by the new MariaDB image; stop any old baseline containers before
+using the shared localhost port.
 
 The test browser runs inside the PHP container at `https://web:8443/`; the host
 binding is loopback-only port **9443**, never 443 or the existing local shop's

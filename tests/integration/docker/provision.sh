@@ -11,7 +11,7 @@ if [ -f app/etc/env.php ]; then
 fi
 
 composer create-project --repository-url=https://mirror.mage-os.org/ \
-    --no-install --no-interaction magento/project-community-edition . 2.4.7-p10
+    --no-install --no-interaction magento/project-community-edition . 2.4.8-p5
 composer config repositories.magento composer https://mirror.mage-os.org/
 composer config --unset repositories.0
 composer install --no-dev --prefer-dist --no-interaction
