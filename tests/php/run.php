@@ -40,19 +40,19 @@ $tests = [];
 $tests['release baseline rejects wrong or missing platform versions'] = function () use ($root): void {
     $expected = parse_ini_file($root . '/tests/integration/baseline.env', false, INI_SCANNER_RAW);
     $matching = [
-        'MAGENTO_VERSION' => '2.4.7-p10',
+        'MAGENTO_VERSION' => '2.4.8-p5',
         'PHP_VERSION' => '8.3.30',
         'COMPOSER_VERSION' => '2.10.0',
-        'MARIADB_VERSION' => '10.11.14-MariaDB',
-        'OPENSEARCH_VERSION' => '2.19.4',
+        'MARIADB_VERSION' => '11.4.10-MariaDB',
+        'OPENSEARCH_VERSION' => '3.4.0',
     ];
     basicrum_assert_same([], basicrum_baseline_errors($expected, $matching), 'declared platform passes');
     foreach ([
         'MAGENTO_VERSION' => '2.4.9',
         'PHP_VERSION' => '8.5.6',
         'COMPOSER_VERSION' => '2.1.0',
-        'MARIADB_VERSION' => '11.4.0-MariaDB',
-        'OPENSEARCH_VERSION' => '2.190.0',
+        'MARIADB_VERSION' => '10.11.14-MariaDB',
+        'OPENSEARCH_VERSION' => '3.40.0',
     ] as $key => $version) {
         $wrong = array_replace($matching, [$key => $version]);
         basicrum_assert_same([$key], array_keys(basicrum_baseline_errors($expected, $wrong)), $key . ' mismatch');

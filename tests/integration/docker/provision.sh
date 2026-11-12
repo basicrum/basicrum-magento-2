@@ -11,7 +11,7 @@ if [ -f app/etc/env.php ]; then
 fi
 
 composer create-project --repository-url=https://mirror.mage-os.org/ \
-    --no-install --no-interaction magento/project-community-edition . 2.4.7-p10
+    --no-install --no-interaction magento/project-community-edition . 2.4.8-p5
 composer config repositories.magento composer https://mirror.mage-os.org/
 composer config --unset repositories.0
 composer install --no-dev --prefer-dist --no-interaction
@@ -27,7 +27,8 @@ php bin/magento setup:install --base-url="$MAGENTO_STOREFRONT_URL" \
 # adds external scripts even without checkout; keep Magento_Paypal for CSP checks.
 php bin/magento module:disable Magento_AdminAdobeImsTwoFactorAuth Magento_TwoFactorAuth \
     Magento_AdminAnalytics PayPal_Braintree PayPal_BraintreeGraphQl \
-    PayPal_BraintreeCustomerBalance PayPal_BraintreeGiftCardAccount PayPal_BraintreeGiftWrapping
+    PayPal_BraintreeCustomerBalance PayPal_BraintreeGiftCardAccount PayPal_BraintreeGiftWrapping \
+    PayPal_BraintreeGiftCard PayPal_BraintreeReward
 php bin/magento deploy:mode:set developer
 php bin/magento config:set system/smtp/disable 1
 # Admin Analytics is already disabled; its admin/usage/enabled field no longer exists.
