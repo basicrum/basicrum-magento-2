@@ -17,6 +17,8 @@ time, knowledge, and feedback to help shape this module:
   the original extension structure around Magento best practices.
 - [Ruud van Zuidam](https://www.linkedin.com/in/ruudvanzuidam/) — for contributing
   best practices, logic fixes, and improvements to CSP support.
+- [Michiel Gerritsen](https://github.com/michielgerritsen) — for contributing
+  PHP 8.5 support and extending CI coverage.
 - The participants of Magento Unconference Netherlands — for sharing what they
   wanted from a Magento 2 monitoring extension.
 
