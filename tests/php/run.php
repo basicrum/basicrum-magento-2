@@ -678,6 +678,59 @@ $tests['save backends validate normalize and honor the same-form HTTP decision']
     basicrum_assert_same(30000, $wait->getValue(), 'save-time wait bound');
 };
 
+$tests['wait normalization handles numeric extremes without PHP warnings'] = function (): void {
+    $previousErrorReporting = error_reporting(E_ALL);
+    set_error_handler(static function (int $severity, string $message, string $file, int $line): never {
+        throw new ErrorException($message, 0, $severity, $file, $line);
+    });
+
+    try {
+        foreach ([
+            'large float' => [1e20, 30000],
+            'negative large float' => [-1e20, 0],
+            'positive infinity' => [INF, 0],
+            'negative infinity' => [-INF, 0],
+            'not a number' => [NAN, 0],
+            'maximum integer' => [PHP_INT_MAX, 30000],
+            'minimum integer' => [PHP_INT_MIN, 0],
+            'large numeric string' => ['1e20', 30000],
+            'overflowing numeric string' => ['1e309', 30000],
+            'negative overflowing numeric string' => ['-1e309', 0],
+            'fractional float' => [500.75, 500],
+            'fractional numeric string' => ['500.75', 500],
+            'negative fraction' => [-0.5, 0],
+            'zero' => [0, 0],
+            'upper bound' => [30000, 30000],
+            'invalid string' => ['not-a-number', 0],
+            'missing value' => [null, 0],
+            'non-scalar value' => [[], 0],
+        ] as $label => [$value, $expected]) {
+            basicrum_assert_same($expected, Config::normalizeWaitMilliseconds($value), $label . ' normalization');
+
+            $wait = new WaitMilliseconds();
+            $wait->setValue($value);
+            $wait->beforeSave();
+            basicrum_assert_same($expected, $wait->getValue(), $label . ' save normalization');
+
+            $default = ScopeConfigInterface::SCOPE_TYPE_DEFAULT;
+            $config = new Config(new BasicrumTestScopeConfig([
+                basicrum_test_key($default, 0, Config::XML_PATH_ENABLED) => '1',
+                basicrum_test_key($default, 0, Config::XML_PATH_BEACON_ENDPOINT) => 'https://collector.test/beacon',
+                basicrum_test_key($default, 0, Config::XML_PATH_BRUM_SITE_ID) => '550e8400-e29b-41d4-a716-446655440000',
+                basicrum_test_key($default, 0, Config::XML_PATH_WAIT_ENABLED) => '0',
+                basicrum_test_key($default, 0, Config::XML_PATH_WAIT_MS) => $value,
+            ]));
+            $runtime = $config->getRuntimeConfig();
+            basicrum_assert_true(is_array($runtime), $label . ' keeps runtime configuration available');
+            basicrum_assert_false($runtime['wait_after_onload'], $label . ' preserves disabled delay');
+            basicrum_assert_same($expected, $runtime['delay_ms'], $label . ' runtime normalization');
+        }
+    } finally {
+        restore_error_handler();
+        error_reporting($previousErrorReporting);
+    }
+};
+
 $tests['runtime gate requires enable endpoint and site identity'] = function (): void {
     $default = ScopeConfigInterface::SCOPE_TYPE_DEFAULT;
     $base = [
