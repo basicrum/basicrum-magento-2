@@ -2,6 +2,14 @@
 
 Notable changes to Basicrum Analytics are recorded here.
 
+## [Unreleased]
+
+### Changed
+
+- Allow PHP 8.5 (`~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0`). CI runs the focused
+  PHP checks, PHPStan level 8 and the Magento coding standard on PHP 8.5 as
+  well. The native release gate stays on Magento 2.4.7-p10 / PHP 8.3.
+
 ## [0.1.1] - 2026-09-24
 
 ### Added
