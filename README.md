@@ -72,8 +72,8 @@ Monitoring remains disabled until you configure and enable Basicrum below.
 
 ## Compatibility
 
-Tested with **Magento Open Source 2.4.7-p10**, **PHP 8.3**, Luma, and built-in
-full-page cache. Other Magento/PHP combinations, Adobe Commerce, Hyvä,
+Tested with **Magento Open Source 2.4.7-p10 and 2.4.8-p5**, **PHP 8.3**, Luma,
+and built-in full-page cache. Native CI targets 2.4.8-p5. Other Magento/PHP combinations, Adobe Commerce, Hyvä,
 headless/PWA storefronts, Varnish, and third-party optimizers are not verified.
 
 ## Configuration

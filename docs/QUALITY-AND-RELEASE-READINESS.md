@@ -202,10 +202,35 @@ CI has not run for these uncommitted changes. This run reused the dedicated
 disposable installation; it did not reprovision fresh volumes. No release or
 push was performed.
 
+## Native CI baseline update (2026-11-12)
+
+Fresh Magento 2.4.7-p10 provisioning was blocked by
+[GHSA-cxf4-7mrp-vvpr](https://github.com/thephpleague/flysystem/security/advisories/GHSA-cxf4-7mrp-vvpr):
+its Flysystem 2 constraint cannot select a patched version. The baseline now uses
+Magento 2.4.8-p5, PHP 8.3, Composer 2.10, MariaDB 11.4, OpenSearch 3.4.0, and
+nginx 1.30.6. Composer security blocking remains enabled without exceptions.
+Fresh dependency resolution selected Flysystem 3.36.0; the installed production
+dependencies passed `composer audit --no-dev --abandoned=ignore` with no security
+advisories. Abandoned-package notices remain separate from security findings.
+
+The new `basicrum-release-baseline-248` Compose project uses fresh application
+and database volumes, leaving the previous 2.4.7/10.11 volumes untouched. The
+disposable Braintree exclusions also include the two additional 2.4.8 modules.
+
+Local validation on committed candidate `ac1fd21934751a5de6d1dab36630d2d9dc3fb052`
+passed the full archive/install/native gate: baseline checks, upgrade, DI
+compilation, static deployment, native configuration saves, and 21 browser tests.
+The four existing sample-data/order-creating tests remain explicitly skipped.
+The focused PHP suite passed all 18 groups. Logs are retained locally in
+`.test-results/native-baseline-248/`; remote checks are attached to
+[PR #21](https://github.com/basicrum/basicrum-magento-2/pull/21).
+This validates the test baseline, not a new package release or native PHP 8.5.
+
 ## Tested compatibility, not inferred compatibility
 
 | Combination | Evidence in this follow-up |
 | --- | --- |
+| Magento Open Source 2.4.8-p5, PHP CLI/FPM 8.3.31, Composer 2.10.3, MariaDB 11.4, OpenSearch 3.4.0, nginx 1.30.6 | Fresh isolated installation and full native gate on the committed candidate above |
 | Magento Open Source 2.4.7-p10, PHP CLI/FPM 8.3.31, Composer 2.10, MariaDB 10.11, OpenSearch 2.19.4 | Actual isolated installation, native configuration and browser checks |
 | Luma, en_US, built-in FPC, deployed static files | Actual Admin/storefront, enforcing checkout CSP, consent/beacon/cookie/redaction and two-visitor HIT checks |
 | PHP 8.2 / 8.4 | Focused PHP checks only; not native Magento runs |
