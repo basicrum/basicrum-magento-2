@@ -192,11 +192,15 @@ class Config
      */
     public static function normalizeWaitMilliseconds(mixed $value): int
     {
-        if (!is_scalar($value) || !is_numeric($value)) {
+        if (!is_scalar($value)
+            || !is_numeric($value)
+            || (is_float($value) && !is_finite($value))
+        ) {
             return 0;
         }
 
-        return min(self::MAX_WAIT_MS, max(0, (int) $value));
+        // PHP 8.5 warns when casting out-of-range floats; bound the value first.
+        return (int) min(self::MAX_WAIT_MS, max(0, $value));
     }
 
     /**
