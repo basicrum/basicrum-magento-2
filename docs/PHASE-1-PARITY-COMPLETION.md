@@ -5,7 +5,7 @@ shared parity ledger and both reference plugins were intentionally left
 unchanged.
 
 This is the original Phase 1 completion snapshot. The current release target
-is `0.1.1`; `0.1.0` was withdrawn and cannot be reused on Packagist. Follow the
+is `0.1.2`; `0.1.0` was withdrawn and cannot be reused on Packagist. Follow the
 [current release gate](../tests/integration/README.md#required-pre-release-native-gate)
 instead of the historical release references below.
 

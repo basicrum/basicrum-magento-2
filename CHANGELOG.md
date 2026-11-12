@@ -4,11 +4,31 @@ Notable changes to Basicrum Analytics are recorded here.
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-11-12
+
 ### Changed
 
 - Allow PHP 8.5 (`~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0`). CI runs the focused
   PHP checks, PHPStan level 8 and the Magento coding standard on PHP 8.5 as
-  well. The native release gate stays on Magento 2.4.7-p10 / PHP 8.3.
+  well. Native Magento/PHP 8.5 certification remains outside this release's
+  validation scope.
+- Move the native test baseline to Magento Open Source 2.4.8-p5 / PHP 8.3,
+  with MariaDB 11.4, OpenSearch 3.4, and nginx 1.30. Fresh installations resolve
+  patched Flysystem 3 without disabling Composer security checks. Separate
+  Compose volumes preserve the previous 2.4.7 test installation.
+- Update the release gate, CI invocation, and installation instructions for
+  `0.1.2`, retaining immutable versions derived from Git tags.
+
+### Fixed
+
+- Clamp configured wait delays before converting to integers, avoiding PHP 8.5
+  warnings for large floats. Non-finite floats normalize to zero. Regression
+  checks cover the save backend and runtime configuration, including when the
+  delay is disabled.
+
+### Added
+
+- Acknowledge Magento community contributors in the README.
 
 ## [0.1.1] - 2026-09-24
 
