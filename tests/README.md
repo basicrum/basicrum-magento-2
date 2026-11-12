@@ -62,13 +62,13 @@ job uploads an HTML report with traces from failed test attempts, retained for
 seven days. A flaky pass still fails the job; retries do not hide failures.
 Additional CI checks run Magento-aware PHPStan level 8 and Magento coding
 standards against real Magento components, with lowest/stable dependency
-resolution on PHP 8.2–8.4 and a locked PHP 8.3 job. These component checks are
+resolution on PHP 8.2–8.5 and a locked PHP 8.3 job. These component checks are
 not full-platform compatibility certification. The committed tooling lock requires
-PHP 8.3 or 8.4 and resolves framework 103.0.9 (the Magento 2.4.9 component line).
+PHP 8.3, 8.4 or 8.5 and resolves framework 103.0.9 (the Magento 2.4.9 component line).
 The locally tested PHP 8.3 lowest resolution uses framework 103.0.7 (2.4.7 GA),
 not 2.4.7-p10. CI's lowest/stable jobs resolve afresh for their PHP version; their
 logs report the exact component versions. No PHPStan run against the native
-2.4.7-p10 dependency set is claimed. Run the locked tools locally on PHP 8.3/8.4:
+2.4.7-p10 dependency set is claimed. Run the locked tools locally on PHP 8.3/8.4/8.5:
 
 ```sh
 composer --working-dir=tests/quality install --no-interaction --no-scripts

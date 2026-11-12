@@ -33,7 +33,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: ['8.2', '8.3', '8.4']
+        php: ['8.2', '8.3', '8.4', '8.5']
     container: php:${{ matrix.php }}-cli
     steps:
       - name: Install Git for committed-package regression checks
@@ -52,7 +52,7 @@ jobs:
         run: php tests/php/run.php
 
       - name: Validate declared PHP constraint
-        run: php -r '$data=json_decode(file_get_contents("composer.json"), true, 512, JSON_THROW_ON_ERROR); if (($data["require"]["php"] ?? "") !== ">=8.2 <8.5") { exit(1); }'
+        run: php -r '$data=json_decode(file_get_contents("composer.json"), true, 512, JSON_THROW_ON_ERROR); if (($data["require"]["php"] ?? "") !== "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0") { exit(1); }'
 
   browser:
     name: Chromium loader and beacon checks
